@@ -1,6 +1,6 @@
 version       = "0.1.0"
 author        = "Kristian Fjeld Hasselknippe"
-description   = "Canvas target for the midio ui engine"
+description   = "HTML Canvas backend for the midio ui engine"
 license       = "MIT"
 srcDir        = "src"
 
