@@ -4,8 +4,8 @@ import canvas
 import canvas_renderer
 import midio_ui
 
-proc renderPrimitives(canvasContext: CanvasContext2d, primitives: seq[Primitive], size: float): void =
-  canvasContext.clearRect(0.0, 0.0, size, size)
+proc renderPrimitives(canvasContext: CanvasContext2d, primitives: seq[Primitive], size: Vec2[float]): void =
+  canvasContext.clearRect(0.0, 0.0, size.x, size.y)
   canvasContext.render(primitives)
 
 
@@ -18,15 +18,15 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
   let canvas = canvasElem.Canvas
 
   const scaleFactor = 2.0
-  const size = 2000.0
+  var size = vec2(float(window.innerWidth),float(window.innerHeight))
   let scale = window.devicePixelRatio * scaleFactor
 
-  canvas.width = size
-  canvas.height = size
+  canvas.width = size.x
+  canvas.height = size.y
 
   let elementWidth = canvasElem.offsetWidth
   let elementHeight = canvasElem.offsetHeight
-  let canvasPixelScale = vec2(size / elementWidth * scaleFactor, size / elementHeight * scaleFactor)
+  let canvasPixelScale = vec2(size.x / elementWidth * scaleFactor, size.y / elementHeight * scaleFactor)
 
 
   let canvasContext = canvas.getContext2d
@@ -51,7 +51,7 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
   )
 
   let context = midio_ui.init(
-    vec2(size,size),
+    size,
     vec2(scale, scale),
     measureText,
     render
@@ -85,7 +85,12 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
 
   dom.window.addEventListener "resize", proc(event: Event) =
     let ev = cast[UIEvent](event)
-    context.dispatchWindowSizeChanged(vec2(float(window.innerWidth), float(window.innerHeight)))
+    size = vec2(float(window.innerWidth),float(window.innerHeight))
+    canvas.width = size.x
+    canvas.height = size.y
+    context.dispatchWindowSizeChanged(size)
+    canvasContext.scale(scale, scale)
+    context.rootElement.invalidateLayout()
 
   var isAnimating = true
 
