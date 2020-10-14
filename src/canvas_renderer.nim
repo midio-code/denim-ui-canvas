@@ -50,6 +50,19 @@ proc render*(ctx: CanvasContext2d, primitives: seq[Primitive]): void =
   for p in primitives:
     ctx.restore()
     ctx.save()
+
+    if p.transform.isSome() and p.worldPos.isSome() and p.size.isSome():
+      let t = p.transform.get()
+      let wp = p.worldPos.get()
+      let size = p.size.get()
+      let xPos = wp.x + size.x / 2.0
+      let yPos = wp.y + size.y / 2.0
+      ctx.translate(xPos, yPos)
+      ctx.rotate(t.rotation)
+      ctx.translate(-xPos, -yPos)
+      ctx.translate(t.translation.x, t.translation.y)
+      ctx.scale(t.scale.x, t.scale.y)
+
     ctx.beginPath()
     if p.clipBounds.isSome():
       let cb = p.clipBounds.get()

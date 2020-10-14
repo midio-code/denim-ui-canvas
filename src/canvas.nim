@@ -24,9 +24,6 @@ type
 proc getContext2d*(c: Canvas): CanvasContext2d =
   {.emit: "`result` = `c`.getContext('2d');".}
 
-proc translate*(c: CanvasContext2d, x: float, y: float) {.importjs: "#.translate(@)".}
-proc scale*(c: CanvasContext2d, x: float, y: float) {.importjs: "#.scale(@)".}
-
 proc beginPath*(c: CanvasContext2d) {.importjs: "#.beginPath()".}
 proc strokeText*(c: CanvasContext2d, txt: cstring, x, y: float) {.importjs: "#.strokeText(@)".}
 proc fillText*(c: CanvasContext2d, txt: cstring, x, y: float) {.importjs: "#.fillText(@)".}
@@ -58,3 +55,17 @@ type
   Path2D* {.importjs.} = object
 
 proc newPath2D*(): Path2D {.importjs: "new Path2D()".}
+
+proc transform*(
+  c: CanvasContext2d,
+  scaleX: float,
+  skewX: float,
+  scaleY: float,
+  skewY: float,
+  transX: float,
+  transY: float
+) {.importjs: "#.transform(@)".}
+
+proc rotate*(c: CanvasContext2d, angle: float) {.importjs: "#.rotate(@)".}
+proc scale*(c: CanvasContext2d, x: float, y: float) {.importjs: "#.scale(@)".}
+proc translate*(c: CanvasContext2d, x: float, y: float) {.importjs: "#.translate(@)".}
