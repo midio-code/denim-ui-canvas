@@ -4,36 +4,30 @@ import canvas
 import canvas_renderer
 import midio_ui
 
-const scaleFactor = 2.0
-const size = 2000.0
-let scale = window.devicePixelRatio * scaleFactor
-
-let nativeContainer = getElementById("nativeContainer")
-let canvasElem = getElementById("rootCanvas")
-let elementWidth = canvasElem.offsetWidth
-let elementHeight = canvasElem.offsetHeight
-let canvasPixelScale = vec2(size / elementWidth * scaleFactor, size / elementHeight * scaleFactor)
-
-echo "Canvas pixel scale: ", canvasPixelScale
-
-type
-  JsContext = ref object
-    render*: (float) -> void
-    dispatchPointerMove*: (float, float) -> void
-    dispatchPointerPress*: (float, float) -> void
-    dispatchPointerRelease*: (float, float) -> void
-    dispatchKeyDown*: (int, string) -> void
-    dispatchUpdate*: (float) -> void
-
-proc renderPrimitives(canvasContext: CanvasContext2d, primitives: seq[Primitive]): void =
+proc renderPrimitives(canvasContext: CanvasContext2d, primitives: seq[Primitive], size: float): void =
   canvasContext.clearRect(0.0, 0.0, size, size)
   canvasContext.render(primitives)
 
-proc initJsContext*(render: () -> midio_ui.Element): JsContext {.exportc.} =
+
+#dom.window.addEventListener "scroll", proc(event: Event) =
+
+proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeContainerId: string): void =
+  let nativeContainer = getElementById(nativeContainerId)
+  let canvasElem = getElementById(canvasElementId)
+
   let canvas = canvasElem.Canvas
+
+  const scaleFactor = 2.0
+  const size = 2000.0
+  let scale = window.devicePixelRatio * scaleFactor
 
   canvas.width = size
   canvas.height = size
+
+  let elementWidth = canvasElem.offsetWidth
+  let elementHeight = canvasElem.offsetHeight
+  let canvasPixelScale = vec2(size / elementWidth * scaleFactor, size / elementHeight * scaleFactor)
+
 
   let canvasContext = canvas.getContext2d
   canvasContext.scale(scale, scale)
@@ -65,51 +59,33 @@ proc initJsContext*(render: () -> midio_ui.Element): JsContext {.exportc.} =
 
   proc renderToJsCanvas(dt: float): void =
     let primitives = midio_ui.render(context, dt)
-    canvasContext.renderPrimitives(primitives)
-
-  JsContext(
-    render: renderToJsCanvas,
-    dispatchPointerMove: context.dispatchPointerMove,
-    dispatchPointerPress: context.dispatchPointerDown,
-    dispatchPointerRelease: context.dispatchPointerUp,
-    dispatchKeyDown: context.dispatchKeyDown,
-    dispatchUpdate: context.dispatchUpdate,
-  )
-
-
-
-#dom.window.addEventListener "resize", proc(event: Event) =
-
-#dom.window.addEventListener "scroll", proc(event: Event) =
-#
-
-# TODO: Use canvasElementId and nativeContainerId
-proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeContainerId: string): void =
-  let ctx = initJsContext(render)
+    canvasContext.renderPrimitives(primitives, size)
 
   dom.window.addEventListener "mousedown", proc(event: Event) =
     let ev = cast[MouseEvent](event)
     let canvas = document.getElementById("rootCanvas")
     let bounds = canvas.getBoundingClientRect()
-    ctx.dispatchPointerPress(ev.clientX - bounds.left, ev.clientY - bounds.top)
+    context.dispatchPointerDown(ev.clientX - bounds.left, ev.clientY - bounds.top)
 
   dom.window.addEventListener "mouseup", proc(event: Event) =
     let ev = cast[MouseEvent](event)
     let canvas = document.getElementById("rootCanvas")
     let bounds = canvas.getBoundingClientRect()
-    ctx.dispatchPointerRelease(ev.clientX - bounds.left, ev.clientY - bounds.top)
+    context.dispatchPointerUp(ev.clientX - bounds.left, ev.clientY - bounds.top)
 
   dom.window.addEventListener "mousemove", proc(event: Event) =
     let ev = cast[MouseEvent](event)
     let canvas = document.getElementById("rootCanvas")
     let bounds = canvas.getBoundingClientRect()
-    ctx.dispatchPointerMove(ev.clientX - bounds.left, ev.clientY - bounds.top)
+    context.dispatchPointerMove(ev.clientX - bounds.left, ev.clientY - bounds.top)
 
   dom.window.addEventListener "keydown", proc(event: Event) =
-    ## When keyboards key is pressed down
-    ## Used together with key up for continuous things like scroll or games
     let ev = cast[KeyboardEvent](event)
-    ctx.dispatchKeyDown(ev.keyCode, $ev.key)
+    context.dispatchKeyDown(ev.keyCode, $ev.key)
+
+  dom.window.addEventListener "resize", proc(event: Event) =
+    let ev = cast[UIEvent](event)
+    context.dispatchWindowSizeChanged(vec2(float(window.innerWidth), float(window.innerHeight)))
 
   var isAnimating = true
 
@@ -118,8 +94,8 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
     let dt = time - lastTime
     lastTime = time
 
-    ctx.dispatchUpdate(dt)
-    ctx.render(dt)
+    context.dispatchUpdate(dt)
+    renderToJsCanvas(dt)
 
     discard dom.window.requestAnimationFrame(frame)
 
