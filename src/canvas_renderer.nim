@@ -36,12 +36,14 @@ proc renderEllipse(ctx: CanvasContext2d, info: EllipseInfo): void =
 proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInfo: Option[StrokeInfo]): void =
   if strokeInfo.isSome():
     ctx.lineWidth = strokeInfo.get().width
+  else:
+    ctx.lineWidth = 0.0
   if colorInfo.isSome():
     let ci = colorInfo.get()
     if ci.fill.isSome():
       ctx.fillStyle = ci.fill.get()
       ctx.fill()
-    if ci.stroke.isSome():
+    if ci.stroke.isSome() and strokeInfo.map(x => x.width).get(0.0) > 0.0:
       ctx.strokeStyle = ci.stroke.get()
       ctx.stroke()
 
