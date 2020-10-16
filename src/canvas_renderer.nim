@@ -47,57 +47,62 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
       ctx.strokeStyle = ci.stroke.get()
       ctx.stroke()
 
-proc render*(ctx: CanvasContext2d, primitives: seq[Primitive]): void =
-  ctx.save()
-  for p in primitives:
-    ctx.restore()
-    ctx.save()
+proc renderPrimitive(ctx: CanvasContext2d, p: Primitive, offset: Point): void =
+  if p.transform.isSome():
+    let t = p.transform.get()
+    let wp = offset
+    let size = p.bounds.size
+    let xPos = wp.x + size.x / 2.0
+    let yPos = wp.y + size.y / 2.0
+    ctx.translate(xPos, yPos)
+    ctx.rotate(t.rotation)
+    ctx.translate(-xPos, -yPos)
+    ctx.translate(t.translation.x, t.translation.y)
+    ctx.scale(t.scale.x, t.scale.y)
 
-    if p.transform.isSome() and p.worldPos.isSome() and p.size.isSome():
-      let t = p.transform.get()
-      let wp = p.worldPos.get()
-      let size = p.size.get()
-      let xPos = wp.x + size.x / 2.0
-      let yPos = wp.y + size.y / 2.0
-      ctx.translate(xPos, yPos)
-      ctx.rotate(t.rotation)
-      ctx.translate(-xPos, -yPos)
-      ctx.translate(t.translation.x, t.translation.y)
-      ctx.scale(t.scale.x, t.scale.y)
-
+  case p.kind
+  of Container:
+    discard
+  of Path:
     ctx.beginPath()
-    if p.clipBounds.isSome():
-      let cb = p.clipBounds.get()
-      ctx.rect(cb.pos.x, cb.pos.y, cb.size.x, cb.size.y)
-      ctx.clip()
+    for segment in p.segments:
+      renderSegment(ctx, segment)
+    fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
+  of Text:
+    renderText(ctx, p.colorInfo, p.textInfo)
+  of Circle:
+    let info = p.circleInfo
+    renderCircle(ctx, info.center, info.radius)
+    fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
+  of Ellipse:
+    let info = p.ellipseInfo
+    renderEllipse(ctx, info)
+    fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
+  of Rectangle:
+    if p.strokeInfo.isSome():
+      ctx.lineWidth = p.strokeInfo.get().width
+    if p.colorInfo.isSome():
+      let b = p.rectangleInfo.bounds
+      let ci = p.colorInfo.get()
+      if ci.fill.isSome():
+        ctx.fillStyle = ci.fill.get()
+        ctx.fillRect(b.left, b.top, b.width, b.height)
+      if ci.stroke.isSome():
+        ctx.strokeStyle = ci.stroke.get()
+        ctx.strokeRect(b.left, b.top, b.width, b.height)
 
-    case p.kind
-    of Path:
-      ctx.beginPath()
-      for segment in p.segments:
-        renderSegment(ctx, segment)
-      fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
-    of Text:
-      renderText(ctx, p.colorInfo, p.textInfo)
-    of Circle:
-      let info = p.circleInfo
-      ctx.beginPath()
-      renderCircle(ctx, info.center, info.radius)
-      fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
-    of Ellipse:
-      let info = p.ellipseInfo
-      ctx.beginPath()
-      renderEllipse(ctx, info)
-      fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
-    of Rectangle:
-      if p.strokeInfo.isSome():
-        ctx.lineWidth = p.strokeInfo.get().width
-      if p.colorInfo.isSome():
-        let b = p.rectangleInfo.bounds
-        let ci = p.colorInfo.get()
-        if ci.fill.isSome():
-          ctx.fillStyle = ci.fill.get()
-          ctx.fillRect(b.left, b.top, b.width, b.height)
-        if ci.stroke.isSome():
-          ctx.strokeStyle = ci.stroke.get()
-          ctx.strokeRect(b.left, b.top, b.width, b.height)
+
+proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
+  proc renderInner(primitive: Primitive, offset: Vec2[float]): void =
+    ctx.save()
+    ctx.renderPrimitive(primitive, offset)
+    for p in primitive.children:
+      if p.clipToBounds:
+        ctx.beginPath()
+        let cb = p.bounds.get()
+        ctx.rect(cb.pos.x, cb.pos.y, cb.size.x, cb.size.y)
+        ctx.clip()
+      renderInner(p, offset + p.bounds.pos)
+    ctx.restore()
+
+  renderInner(primitive, vec2(0.0))

@@ -4,9 +4,9 @@ import canvas
 import canvas_renderer
 import midio_ui
 
-proc renderPrimitives(canvasContext: CanvasContext2d, primitives: seq[Primitive], size: Vec2[float]): void =
+proc renderPrimitives(canvasContext: CanvasContext2d, primitive: Primitive, size: Vec2[float]): void =
   canvasContext.clearRect(0.0, 0.0, size.x, size.y)
-  canvasContext.render(primitives)
+  canvasContext.render(primitive)
 
 
 #dom.window.addEventListener "scroll", proc(event: Event) =
@@ -58,8 +58,9 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
   )
 
   proc renderToJsCanvas(dt: float): void =
-    let primitives = midio_ui.render(context, dt)
-    canvasContext.renderPrimitives(primitives, size)
+    let primitive = midio_ui.render(context, dt)
+    if primitive.isSome():
+      canvasContext.renderPrimitives(primitive.get(), size)
 
   dom.window.addEventListener "mousedown", proc(event: Event) =
     let ev = cast[MouseEvent](event)
