@@ -48,18 +48,6 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
       ctx.stroke()
 
 proc renderPrimitive(ctx: CanvasContext2d, p: Primitive, offset: Point): void =
-  if p.transform.isSome():
-    let t = p.transform.get()
-    let wp = offset
-    let size = p.bounds.size
-    let xPos = wp.x + size.x / 2.0
-    let yPos = wp.y + size.y / 2.0
-    ctx.translate(xPos, yPos)
-    ctx.rotate(t.rotation)
-    ctx.translate(-xPos, -yPos)
-    ctx.translate(t.translation.x, t.translation.y)
-    ctx.scale(t.scale.x, t.scale.y)
-
   case p.kind
   of Container:
     discard
@@ -95,13 +83,30 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive, offset: Point): void =
 proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
   proc renderInner(primitive: Primitive, offset: Vec2[float]): void =
     ctx.save()
+    if primitive.transform.isSome():
+      let transform = primitive.transform.get()
+      let wp = offset
+      let size = primitive.bounds.size
+      let xPos = wp.x + size.x / 2.0
+      let yPos = wp.y + size.y / 2.0
+      ctx.translate(xPos, yPos)
+      ctx.rotate(transform.rotation)
+      ctx.translate(-xPos, -yPos)
+      ctx.translate(
+        transform.translation.x,
+        transform.translation.y
+      )
+      ctx.scale(
+        transform.scale.x,
+        transform.scale.y
+      )
+    if primitive.clipToBounds:
+      ctx.beginPath()
+      let cb = primitive.bounds
+      ctx.rect(offset.x, offset.y, cb.size.x, cb.size.y)
+      ctx.clip()
     ctx.renderPrimitive(primitive, offset)
     for p in primitive.children:
-      if p.clipToBounds:
-        ctx.beginPath()
-        let cb = p.bounds.get()
-        ctx.rect(cb.pos.x, cb.pos.y, cb.size.x, cb.size.y)
-        ctx.clip()
       renderInner(p, offset + p.bounds.pos)
     ctx.restore()
 
