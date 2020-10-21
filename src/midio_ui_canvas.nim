@@ -100,7 +100,6 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
     let dt = time - lastTime
     lastTime = time
 
-    context.dispatchUpdate(dt)
     renderToJsCanvas(dt)
 
     discard dom.window.requestAnimationFrame(frame)
