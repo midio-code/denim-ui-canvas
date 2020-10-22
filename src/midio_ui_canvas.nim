@@ -62,19 +62,19 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
     if primitive.isSome():
       canvasContext.renderPrimitives(primitive.get(), size)
 
-  dom.window.addEventListener "mousedown", proc(event: Event) =
+  dom.window.addEventListener "pointerdown", proc(event: Event) =
     let ev = cast[MouseEvent](event)
     let canvas = document.getElementById("rootCanvas")
     let bounds = canvas.getBoundingClientRect()
     context.dispatchPointerDown(ev.clientX - bounds.left, ev.clientY - bounds.top)
 
-  dom.window.addEventListener "mouseup", proc(event: Event) =
+  dom.window.addEventListener "pointerup", proc(event: Event) =
     let ev = cast[MouseEvent](event)
     let canvas = document.getElementById("rootCanvas")
     let bounds = canvas.getBoundingClientRect()
     context.dispatchPointerUp(ev.clientX - bounds.left, ev.clientY - bounds.top)
 
-  dom.window.addEventListener "mousemove", proc(event: Event) =
+  dom.window.addEventListener "pointermove", proc(event: Event) =
     let ev = cast[MouseEvent](event)
     let canvas = document.getElementById("rootCanvas")
     let bounds = canvas.getBoundingClientRect()
