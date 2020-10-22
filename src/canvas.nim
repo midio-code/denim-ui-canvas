@@ -41,6 +41,7 @@ proc arcTo*(c: CanvasContext2d, x1: float, y1: float, x2: float, y2: float, radi
 proc arc*(c: CanvasContext2d, x: float, y: float, radius: float, startAngle: float, endAngle: float, anticlockwise: bool = false) {.importjs: "#.arc(@)".}
 proc closePath*(c: CanvasContext2d) {.importjs: "#.closePath()".}
 proc quadraticCurveTo*(c: CanvasContext2d, cpx: float, cpy: float, x: float, y: float) {.importjs: "#.quadraticCurveTo(@)".}
+proc bezierCurveTo*(c: CanvasContext2d, cp1x: float, cp1y: float, cp2x: float, cp2y: float, x: float, y: float) {.importjs: "#.bezierCurveTo(@)".}
 
 proc ellipse*(c: CanvasContext2d, x, y, radiusX, radiusY, rotation, startAngle, endAngle: float, anticlockwise: bool = false) {.importjs: "#.ellipse(@)".}
 

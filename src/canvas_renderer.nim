@@ -11,7 +11,11 @@ proc renderSegment(ctx: CanvasContext2d, segment: PathSegment): void =
   of LineTo:
     ctx.lineTo(segment.to.x, segment.to.y)
   of QuadraticCurveTo:
-    ctx.quadraticCurveTo(segment.controlPoint.x, segment.controlPoint.y, segment.point.x, segment.point.y)
+    let info = segment.quadraticInfo
+    ctx.quadraticCurveTo(info.controlPoint.x, info.controlPoint.y, info.point.x, info.point.y)
+  of BezierCurveTo:
+    let info = segment.bezierInfo
+    ctx.bezierCurveTo(info.controlPoint1.x, info.controlPoint1.y, info.controlPoint2.x, info.controlPoint2.y, info.point.x, info.point.y)
   of Close:
     ctx.closePath()
 
@@ -20,18 +24,17 @@ proc renderText(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], textInfo: Te
   ctx.textAlign = textInfo.alignment
   ctx.textBaseline = textInfo.textBaseline
   ctx.font = $textInfo.fontSize & "px " & textInfo.font
-  ctx.fillText(textInfo.text, textInfo.pos.x, textInfo.pos.y)
+  ctx.fillText(textInfo.text, 0.0, 0.0)
 
-proc renderCircle(ctx: CanvasContext2d, center: Vec2[float], radius: float): void =
+proc renderCircle(ctx: CanvasContext2d, radius: float): void =
   ctx.beginPath()
-  ctx.arc(center.x + radius, center.y + radius, radius, 0, 2 * PI)
+  ctx.arc(radius, radius, radius, 0, 2 * PI)
 
 proc renderEllipse(ctx: CanvasContext2d, info: EllipseInfo): void =
   ctx.beginPath()
   let
-    c = info.center
     r = info.radius
-  ctx.ellipse(c.x, c.y, r.x, r.y, info.rotation, info.startAngle, info.endAngle)
+  ctx.ellipse(0.0, 0.0, r.x, r.y, info.rotation, info.startAngle, info.endAngle)
 
 proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInfo: Option[StrokeInfo]): void =
   if strokeInfo.isSome():
@@ -47,7 +50,7 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
       ctx.strokeStyle = ci.stroke.get()
       ctx.stroke()
 
-proc renderPrimitive(ctx: CanvasContext2d, p: Primitive, offset: Point): void =
+proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
   case p.kind
   of Container:
     discard
@@ -60,7 +63,7 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive, offset: Point): void =
     renderText(ctx, p.colorInfo, p.textInfo)
   of Circle:
     let info = p.circleInfo
-    renderCircle(ctx, info.center, info.radius)
+    renderCircle(ctx, info.radius)
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
   of Ellipse:
     let info = p.ellipseInfo
@@ -81,14 +84,15 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive, offset: Point): void =
 
 
 proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
-  proc renderInner(primitive: Primitive, offset: Vec2[float]): void =
+  proc renderInner(primitive: Primitive): void =
     ctx.save()
+
+    ctx.translate(primitive.bounds.x, primitive.bounds.y)
     if primitive.transform.isSome():
       let transform = primitive.transform.get()
-      let wp = offset
       let size = primitive.bounds.size
-      let xPos = wp.x + size.x / 2.0
-      let yPos = wp.y + size.y / 2.0
+      let xPos = size.x / 2.0
+      let yPos = size.y / 2.0
       ctx.translate(xPos, yPos)
       ctx.rotate(transform.rotation)
       ctx.translate(-xPos, -yPos)
@@ -103,11 +107,11 @@ proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
     if primitive.clipToBounds:
       ctx.beginPath()
       let cb = primitive.bounds
-      ctx.rect(offset.x, offset.y, cb.size.x, cb.size.y)
+      ctx.rect(0.0, 0.0, cb.size.x, cb.size.y)
       ctx.clip()
-    ctx.renderPrimitive(primitive, offset)
+    ctx.renderPrimitive(primitive)
     for p in primitive.children:
-      renderInner(p, offset + p.bounds.pos)
+      renderInner(p)
     ctx.restore()
 
-  renderInner(primitive, vec2(0.0))
+  renderInner(primitive)
