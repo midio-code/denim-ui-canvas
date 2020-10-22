@@ -93,6 +93,14 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
     canvasContext.scale(scale, scale)
     context.rootElement.invalidateLayout()
 
+  canvasElem.addEventListener "contextmenu", proc(event: Event) =
+    event.preventDefault()
+    event.stopPropagation()
+  nativeContainer.addEventListener "contextmenu", proc(event: Event) =
+    event.preventDefault()
+    event.stopPropagation()
+
+
   var isAnimating = true
 
   var lastTime = 0.0
