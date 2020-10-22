@@ -66,13 +66,13 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
     let ev = cast[MouseEvent](event)
     let canvas = document.getElementById("rootCanvas")
     let bounds = canvas.getBoundingClientRect()
-    context.dispatchPointerDown(ev.clientX - bounds.left, ev.clientY - bounds.top)
+    context.dispatchPointerDown(ev.clientX - bounds.left, ev.clientY - bounds.top, cast[PointerIndex](ev.button))
 
   dom.window.addEventListener "pointerup", proc(event: Event) =
     let ev = cast[MouseEvent](event)
     let canvas = document.getElementById("rootCanvas")
     let bounds = canvas.getBoundingClientRect()
-    context.dispatchPointerUp(ev.clientX - bounds.left, ev.clientY - bounds.top)
+    context.dispatchPointerUp(ev.clientX - bounds.left, ev.clientY - bounds.top, cast[PointerIndex](ev.button))
 
   dom.window.addEventListener "pointermove", proc(event: Event) =
     let ev = cast[MouseEvent](event)
