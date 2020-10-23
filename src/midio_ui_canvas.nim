@@ -3,6 +3,7 @@ import sugar
 import canvas
 import canvas_renderer
 import midio_ui
+import midio_ui/gui/debug_draw
 
 proc renderPrimitives(canvasContext: CanvasContext2d, primitive: Primitive, size: Vec2[float]): void =
   canvasContext.clearRect(0.0, 0.0, size.x, size.y)
@@ -39,6 +40,18 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
     let measured = canvas_measureText(canvasContext, text)
     result = vec2(measured.width, fontSize)
 
+  proc hitTestPath(elem: midio_ui.Element, props: PathProps, point: Point): bool =
+    if elem.bounds.isNone:
+      return false
+    canvasContext.save()
+    canvasContext.resetTransform()
+    let worldPos = elem.actualWorldPosition
+    canvasContext.translate(worldPos.x, worldPos.y)
+    canvasContext.lineWidth = 5.0
+    canvasContext.renderPath(props.data)
+    result = canvasContext.isPointInStroke(point.x, point.y)
+    canvasContext.restore()
+
   # NOTE: Turning off mouse capture for the native layer while one of our elements has pointer capture
   pointerCapturedEmitter.add(
     proc(capturer: midio_ui.Element): void =
@@ -54,6 +67,7 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
     size,
     vec2(scale, scale),
     measureText,
+    hitTestPath,
     render
   )
 

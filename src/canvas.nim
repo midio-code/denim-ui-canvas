@@ -52,10 +52,6 @@ proc clip*(c: CanvasContext2d) {.importjs: "#.clip()".}
 proc save*(c: CanvasContext2d) {.importjs: "#.save()".}
 proc restore*(c: CanvasContext2d) {.importjs: "#.restore()".}
 
-type
-  Path2D* {.importjs.} = object
-
-proc newPath2D*(): Path2D {.importjs: "new Path2D()".}
 
 proc transform*(
   c: CanvasContext2d,
@@ -70,3 +66,15 @@ proc transform*(
 proc rotate*(c: CanvasContext2d, angle: float) {.importjs: "#.rotate(@)".}
 proc scale*(c: CanvasContext2d, x: float, y: float) {.importjs: "#.scale(@)".}
 proc translate*(c: CanvasContext2d, x: float, y: float) {.importjs: "#.translate(@)".}
+proc resetTransform*(c: CanvasContext2d) {.importjs: "#.resetTransform()".}
+
+
+type
+  Path2D* {.importjs.} = object
+
+proc newPath2D*(): Path2D {.importjs: "new Path2D()".}
+
+proc isPointInPath*(c: CanvasContext2d, x, y: float): bool {.importjs: "#.isPointInPath(@)"}
+proc isPointInPath*(c: CanvasContext2d, path: Path2D, x, y: float): bool {.importjs: "#.isPointInPath(@)"}
+proc isPointInStroke*(c: CanvasContext2d, x, y: float): bool {.importjs: "#.isPointInStroke(@)"}
+proc isPointInStroke*(c: CanvasContext2d, path: Path2D, x, y: float): bool {.importjs: "#.isPointInStroke(@)"}

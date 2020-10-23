@@ -50,14 +50,17 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
       ctx.strokeStyle = ci.stroke.get()
       ctx.stroke()
 
+proc renderPath*(ctx: CanvasContext2d, segments: seq[PathSegment]): void =
+  ctx.beginPath()
+  for segment in segments:
+    renderSegment(ctx, segment)
+
 proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
   case p.kind
   of Container:
     discard
   of Path:
-    ctx.beginPath()
-    for segment in p.segments:
-      renderSegment(ctx, segment)
+    ctx.renderPath(p.segments)
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
   of Text:
     renderText(ctx, p.colorInfo, p.textInfo)
@@ -70,18 +73,10 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
     renderEllipse(ctx, info)
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
   of Rectangle:
-    if p.strokeInfo.isSome():
-      ctx.lineWidth = p.strokeInfo.get().width
-    if p.colorInfo.isSome():
-      let b = p.rectangleInfo.bounds
-      let ci = p.colorInfo.get()
-      if ci.fill.isSome():
-        ctx.fillStyle = ci.fill.get()
-        ctx.fillRect(b.left, b.top, b.width, b.height)
-      if ci.stroke.isSome():
-        ctx.strokeStyle = ci.stroke.get()
-        ctx.strokeRect(b.left, b.top, b.width, b.height)
-
+    let info = p.rectangleInfo
+    ctx.beginPath()
+    ctx.rect(info.bounds.pos.x, info.bounds.pos.y, info.bounds.size.x, info.bounds.size.y)
+    fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
 
 proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
   proc renderInner(primitive: Primitive): void =
