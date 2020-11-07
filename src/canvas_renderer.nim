@@ -57,22 +57,22 @@ proc renderPath*(ctx: CanvasContext2d, segments: seq[PathSegment]): void =
 
 proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
   case p.kind
-  of Container:
+  of PrimitiveKind.Container:
     discard
-  of Path:
+  of PrimitiveKind.Path:
     ctx.renderPath(p.segments)
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
-  of Text:
+  of PrimitiveKind.Text:
     renderText(ctx, p.colorInfo, p.textInfo)
-  of Circle:
+  of PrimitiveKind.Circle:
     let info = p.circleInfo
     renderCircle(ctx, info.radius)
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
-  of Ellipse:
+  of PrimitiveKind.Ellipse:
     let info = p.ellipseInfo
     renderEllipse(ctx, info)
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
-  of Rectangle:
+  of PrimitiveKind.Rectangle:
     let info = p.rectangleInfo
     ctx.beginPath()
     ctx.rect(info.bounds.pos.x, info.bounds.pos.y, info.bounds.size.x, info.bounds.size.y)
