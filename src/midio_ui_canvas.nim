@@ -9,9 +9,6 @@ proc renderPrimitives(canvasContext: CanvasContext2d, primitive: Primitive, size
   canvasContext.clearRect(0.0, 0.0, size.x, size.y)
   canvasContext.render(primitive)
 
-
-#dom.window.addEventListener "scroll", proc(event: Event) =
-
 proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeContainerId: string): void =
   let nativeContainer = getElementById(nativeContainerId)
   let canvasElem = getElementById(canvasElementId)
@@ -96,7 +93,7 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
 
   type
     # NOTE: Polyfills missing event type in the dom module
-    WheelEvent = ref object
+    WheelEvent = ref object of MouseEvent
       deltaX: float
       deltaY: float
       deltaZ: float
@@ -104,7 +101,9 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
 
   dom.window.addEventListener "wheel", proc(event: Event) =
     let ev = cast[WheelEvent](event)
-    context.dispatchWheel(ev.deltaX, ev.deltaY, ev.deltaZ, WheelDeltaUnit(ev.deltaMode))
+    let canvas = document.getElementById("rootCanvas")
+    let bounds = canvas.getBoundingClientRect()
+    context.dispatchWheel(ev.clientX - bounds.left, ev.clientY - bounds.top, ev.deltaX, ev.deltaY, ev.deltaZ, WheelDeltaUnit(ev.deltaMode))
 
   dom.window.addEventListener "keydown", proc(event: Event) =
     let ev = cast[KeyboardEvent](event)
