@@ -94,6 +94,18 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
     let bounds = canvas.getBoundingClientRect()
     context.dispatchPointerMove(ev.clientX - bounds.left, ev.clientY - bounds.top)
 
+  type
+    # NOTE: Polyfills missing event type in the dom module
+    WheelEvent = ref object
+      deltaX: float
+      deltaY: float
+      deltaZ: float
+      deltaMode: int
+
+  dom.window.addEventListener "wheel", proc(event: Event) =
+    let ev = cast[WheelEvent](event)
+    context.dispatchWheel(ev.deltaX, ev.deltaY, ev.deltaZ, WheelDeltaUnit(ev.deltaMode))
+
   dom.window.addEventListener "keydown", proc(event: Event) =
     let ev = cast[KeyboardEvent](event)
     context.dispatchKeyDown(ev.keyCode, $ev.key)
