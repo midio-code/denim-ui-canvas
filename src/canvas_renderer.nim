@@ -83,22 +83,17 @@ proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
     ctx.save()
 
     ctx.translate(primitive.bounds.x, primitive.bounds.y)
-    if primitive.transform.isSome():
-      let transform = primitive.transform.get()
-      let size = primitive.bounds.size
-      let xPos = size.x / 2.0
-      let yPos = size.y / 2.0
-      ctx.translate(xPos, yPos)
-      ctx.rotate(transform.rotation)
-      ctx.translate(-xPos, -yPos)
-      ctx.translate(
-        transform.translation.x,
-        transform.translation.y
-      )
-      ctx.scale(
-        transform.scale.x,
-        transform.scale.y
-      )
+    for transform in  primitive.transform:
+      case transform.kind:
+        of Scaling:
+          ctx.scale(
+            transform.scale.x,
+            transform.scale.y
+          )
+        of Translation:
+          ctx.translate(transform.translation.x, transform.translation.y)
+        of Rotation:
+          ctx.rotate(transform.rotation)
     if primitive.clipToBounds:
       ctx.beginPath()
       let cb = primitive.bounds
