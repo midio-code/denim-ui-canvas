@@ -20,7 +20,7 @@ proc renderSegment(ctx: CanvasContext2d, segment: PathSegment): void =
     ctx.closePath()
 
 proc renderText(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], textInfo: TextInfo): void =
-  ctx.fillStyle = colorInfo.map(x => x.fill.get("red")).get("brown")
+  ctx.fillStyle = $colorInfo.map(x => x.fill.get("red")).get("brown")
   ctx.textAlign = textInfo.alignment
   ctx.textBaseline = textInfo.textBaseline
   ctx.font = $textInfo.fontSize & "px " & textInfo.font
@@ -44,10 +44,10 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
   if colorInfo.isSome():
     let ci = colorInfo.get()
     if ci.fill.isSome():
-      ctx.fillStyle = ci.fill.get()
+      ctx.fillStyle = $ci.fill.get()
       ctx.fill()
     if ci.stroke.isSome() and strokeInfo.map(x => x.width).get(0.0) > 0.0:
-      ctx.strokeStyle = ci.stroke.get()
+      ctx.strokeStyle = $ci.stroke.get()
       ctx.stroke()
 
 proc renderPath*(ctx: CanvasContext2d, segments: seq[PathSegment]): void =
