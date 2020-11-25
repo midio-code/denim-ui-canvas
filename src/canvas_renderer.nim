@@ -20,7 +20,7 @@ proc renderSegment(ctx: CanvasContext2d, segment: PathSegment): void =
     ctx.closePath()
 
 proc renderText(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], textInfo: TextInfo): void =
-  ctx.fillStyle = $colorInfo.map(x => x.fill.get("red")).get("brown")
+  ctx.fillStyle = $colorInfo.map(x => x.fill.get(colRed)).get(colBrown)
   ctx.textAlign = textInfo.alignment
   ctx.textBaseline = textInfo.textBaseline
   ctx.font = $textInfo.fontSize & "px " & textInfo.font
