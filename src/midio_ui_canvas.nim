@@ -109,6 +109,10 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
     let ev = cast[KeyboardEvent](event)
     context.dispatchKeyDown(ev.keyCode, $ev.key)
 
+  dom.window.addEventListener "keyup", proc(event: Event) =
+    let ev = cast[KeyboardEvent](event)
+    context.dispatchKeyUp(ev.keyCode, $ev.key)
+
   dom.window.addEventListener "resize", proc(event: Event) =
     let ev = cast[UIEvent](event)
     size = vec2(float(window.innerWidth),float(window.innerHeight))
