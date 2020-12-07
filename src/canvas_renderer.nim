@@ -61,7 +61,7 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
     proc(shadow: Shadow)  =
       ctx.shadowBlur = shadow.size
       let (r,g,b) = shadow.color.extractRgb()
-      ctx.setShadowColor(float(r),float(g),float(b))
+      ctx.setShadowColor(float(r),float(g),float(b), shadow.alpha)
       ctx.shadowOffsetX = shadow.offset.x
       ctx.shadowOffsetY = shadow.offset.y
   )
