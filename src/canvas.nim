@@ -69,6 +69,19 @@ proc translate*(c: CanvasContext2d, x: float, y: float) {.importjs: "#.translate
 proc resetTransform*(c: CanvasContext2d) {.importjs: "#.resetTransform()".}
 
 
+proc `shadowBlur=`*(c: CanvasContext2d, value: float) {.importjs: "#.shadowBlur = #".}
+proc shadowBlur*(c: CanvasContext2d): float {.importjs: "#.shadowBlur".}
+
+proc setShadowColor*(c: CanvasContext2d, r,g,b: float) {.importjs: "#.shadowColor = `rgb($${#}, $${#}, $${#})`".}
+proc shadowColor*(c: CanvasContext2d): string {.importjs: "#.shadowColor".}
+
+proc `shadowOffsetX=`*(c: CanvasContext2d, value: float) {.importjs: "#.shadowOffsetX = #".}
+proc shadowOffsetX*(c: CanvasContext2d): float {.importjs: "#.shadowOffsetX".}
+
+proc `shadowOffsetY=`*(c: CanvasContext2d, value: float) {.importjs: "#.shadowOffsetY = #".}
+proc shadowOffsetY*(c: CanvasContext2d): float {.importjs: "#.shadowOffsetY".}
+
+
 type
   Path2D* {.importjs.} = object
 

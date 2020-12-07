@@ -41,6 +41,7 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
     ctx.lineWidth = strokeInfo.get().width
   else:
     ctx.lineWidth = 0.0
+
   if colorInfo.isSome():
     let ci = colorInfo.get()
     if ci.fill.isSome():
@@ -56,6 +57,14 @@ proc renderPath*(ctx: CanvasContext2d, segments: seq[PathSegment]): void =
     renderSegment(ctx, segment)
 
 proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
+  p.shadow.map(
+    proc(shadow: Shadow)  =
+      ctx.shadowBlur = shadow.size
+      let (r,g,b) = shadow.color.extractRgb()
+      ctx.setShadowColor(float(r),float(g),float(b))
+      ctx.shadowOffsetX = shadow.offset.x
+      ctx.shadowOffsetY = shadow.offset.y
+  )
   case p.kind
   of PrimitiveKind.Container:
     discard
