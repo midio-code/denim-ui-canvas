@@ -36,7 +36,17 @@ proc renderEllipse(ctx: CanvasContext2d, info: EllipseInfo): void =
     r = info.radius
   ctx.ellipse(0.0, 0.0, r.x, r.y, info.rotation, info.startAngle, info.endAngle)
 
-proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInfo: Option[StrokeInfo]): void =
+proc setShadow(ctx: CanvasContext2d, shadow: Option[Shadow]): void =
+  shadow.map(
+    proc(shadow: Shadow): void =
+      ctx.shadowBlur = shadow.size
+      let (r,g,b) = shadow.color.extractRgb()
+      ctx.setShadowColor(float(r),float(g),float(b), shadow.alpha)
+      ctx.shadowOffsetX = shadow.offset.x
+      ctx.shadowOffsetY = shadow.offset.y
+  )
+
+proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInfo: Option[StrokeInfo], shadow: Option[Shadow]): void =
   if strokeInfo.isSome():
     ctx.lineWidth = strokeInfo.get().width
   else:
@@ -45,11 +55,20 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
   if colorInfo.isSome():
     let ci = colorInfo.get()
     if ci.fill.isSome():
+      ctx.save()
+      ctx.setShadow(shadow)
       ctx.fillStyle = $ci.fill.get()
       ctx.fill()
+      ctx.restore()
     if ci.stroke.isSome() and strokeInfo.map(x => x.width).get(0.0) > 0.0:
+      ctx.save()
+      if ci.fill.isNone:
+        # NOTE: We only apply shadow to the stroke if we haven't already applied it to.
+        # This avoids shadows inside stroked shapes.
+        ctx.setShadow(shadow)
       ctx.strokeStyle = $ci.stroke.get()
       ctx.stroke()
+      ctx.restore()
 
 proc renderPath*(ctx: CanvasContext2d, segments: seq[PathSegment]): void =
   ctx.beginPath()
@@ -57,35 +76,27 @@ proc renderPath*(ctx: CanvasContext2d, segments: seq[PathSegment]): void =
     renderSegment(ctx, segment)
 
 proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
-  p.shadow.map(
-    proc(shadow: Shadow)  =
-      ctx.shadowBlur = shadow.size
-      let (r,g,b) = shadow.color.extractRgb()
-      ctx.setShadowColor(float(r),float(g),float(b), shadow.alpha)
-      ctx.shadowOffsetX = shadow.offset.x
-      ctx.shadowOffsetY = shadow.offset.y
-  )
   case p.kind
   of PrimitiveKind.Container:
     discard
   of PrimitiveKind.Path:
     ctx.renderPath(p.segments)
-    fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
+    fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
   of PrimitiveKind.Text:
     renderText(ctx, p.colorInfo, p.textInfo)
   of PrimitiveKind.Circle:
     let info = p.circleInfo
     renderCircle(ctx, info.radius)
-    fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
+    fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
   of PrimitiveKind.Ellipse:
     let info = p.ellipseInfo
     renderEllipse(ctx, info)
-    fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
+    fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
   of PrimitiveKind.Rectangle:
     let info = p.rectangleInfo
     ctx.beginPath()
     ctx.rect(info.bounds.pos.x, info.bounds.pos.y, info.bounds.size.x, info.bounds.size.y)
-    fillAndStroke(ctx, p.colorInfo, p.strokeInfo)
+    fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
 
 proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
   proc renderInner(primitive: Primitive): void =
