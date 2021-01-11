@@ -2,14 +2,14 @@ import dom
 import sugar
 import canvas
 import canvas_renderer
-import midio_ui
-import midio_ui/gui/debug_draw
+import denim_ui
+import denim_ui/gui/debug_draw
 
 proc renderPrimitives(canvasContext: CanvasContext2d, primitive: Primitive, size: Vec2[float]): void =
   canvasContext.clearRect(0.0, 0.0, size.x, size.y)
   canvasContext.render(primitive)
 
-proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeContainerId: string): void =
+proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeContainerId: string): void =
   let nativeContainer = getElementById(nativeContainerId)
   let canvasElem = getElementById(canvasElementId)
 
@@ -37,7 +37,7 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
     let measured = canvas_measureText(canvasContext, text)
     result = vec2(measured.width, fontSize)
 
-  proc hitTestPath(elem: midio_ui.Element, props: PathProps, point: Point): bool =
+  proc hitTestPath(elem: denim_ui.Element, props: PathProps, point: Point): bool =
     if elem.bounds.isNone:
       return false
     canvasContext.save()
@@ -51,16 +51,16 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
 
   # NOTE: Turning off mouse capture for the native layer while one of our elements has pointer capture
   pointerCapturedEmitter.add(
-    proc(capturer: midio_ui.Element): void =
+    proc(capturer: denim_ui.Element): void =
       nativeContainer.style.pointerEvents = "none"
   )
 
   pointerCaptureReleasedEmitter.add(
-    proc(capturer: midio_ui.Element): void =
+    proc(capturer: denim_ui.Element): void =
       nativeContainer.style.pointerEvents = "auto"
   )
 
-  let context = midio_ui.init(
+  let context = denim_ui.init(
     size,
     vec2(scale, scale),
     measureText,
@@ -69,7 +69,7 @@ proc startApp*(render: () -> midio_ui.Element, canvasElementId: string, nativeCo
   )
 
   proc renderToJsCanvas(dt: float): void =
-    let primitive = midio_ui.render(context, dt)
+    let primitive = denim_ui.render(context, dt)
     if primitive.isSome():
       canvasContext.renderPrimitives(primitive.get(), size)
 

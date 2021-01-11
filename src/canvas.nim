@@ -1,5 +1,5 @@
 import sugar
-import midio_ui
+import denim_ui
 import dom
 
 type

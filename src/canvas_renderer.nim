@@ -2,7 +2,7 @@ import math
 import sugar
 import options
 import canvas
-import midio_ui
+import denim_ui
 
 proc renderSegment(ctx: CanvasContext2d, segment: PathSegment): void =
   case segment.kind
