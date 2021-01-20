@@ -45,7 +45,10 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     let worldPos = elem.actualWorldPosition
     canvasContext.translate(worldPos.x, worldPos.y)
     canvasContext.lineWidth = 5.0
-    canvasContext.renderPath(props.data)
+    if props.stringData.isSome:
+      canvasContext.renderPath(props.stringData.get)
+    else:
+      canvasContext.renderPath(props.data.get)
     result = canvasContext.isPointInStroke(point.x, point.y)
     canvasContext.restore()
 

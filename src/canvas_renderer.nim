@@ -46,7 +46,8 @@ proc setShadow(ctx: CanvasContext2d, shadow: Option[Shadow]): void =
       ctx.shadowOffsetY = shadow.offset.y
   )
 
-proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInfo: Option[StrokeInfo], shadow: Option[Shadow]): void =
+# TODO: Cleanup this signature, stuff has just been tacked on when neeeded
+proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInfo: Option[StrokeInfo], shadow: Option[Shadow], path: Option[Path2D] = none[Path2D]()): void =
   if strokeInfo.isSome():
     ctx.lineWidth = strokeInfo.get().width
   else:
@@ -58,7 +59,11 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
       ctx.save()
       ctx.setShadow(shadow)
       ctx.fillStyle = $ci.fill.get()
-      ctx.fill()
+      if path.isSome:
+        let p = path.get
+        ctx.fill(p)
+      else:
+        ctx.fill()
       ctx.restore()
     if ci.stroke.isSome() and strokeInfo.map(x => x.width).get(0.0) > 0.0:
       ctx.save()
@@ -67,7 +72,11 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
         # This avoids shadows inside stroked shapes.
         ctx.setShadow(shadow)
       ctx.strokeStyle = $ci.stroke.get()
-      ctx.stroke()
+      if path.isSome:
+        let p = path.get
+        ctx.stroke(p)
+      else:
+        ctx.stroke()
       ctx.restore()
 
 proc renderPath*(ctx: CanvasContext2d, segments: seq[PathSegment]): void =
@@ -75,13 +84,20 @@ proc renderPath*(ctx: CanvasContext2d, segments: seq[PathSegment]): void =
   for segment in segments:
     renderSegment(ctx, segment)
 
+proc renderPath*(ctx: CanvasContext2d, data: string): void =
+  ctx.stroke(newPath2D(data))
+
 proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
   case p.kind
   of PrimitiveKind.Container:
     discard
   of PrimitiveKind.Path:
-    ctx.renderPath(p.segments)
-    fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
+    case p.pathInfo.kind:
+      of PathInfoKind.Segments:
+        ctx.renderPath(p.pathInfo.segments)
+        fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
+      of PathInfoKind.String:
+        fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow, newPath2D(p.pathInfo.data))
   of PrimitiveKind.Text:
     renderText(ctx, p.colorInfo, p.textInfo)
   of PrimitiveKind.Circle:

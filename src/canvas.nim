@@ -21,6 +21,8 @@ type
   TextMetrics {.importc.} = object
     width*: float
 
+  Path2D* {.importjs.} = ref object
+
 proc getContext2d*(c: Canvas): CanvasContext2d =
   {.emit: "`result` = `c`.getContext('2d');".}
 
@@ -32,7 +34,9 @@ proc canvas_measureText*(c: CanvasContext2d, txt: cstring): TextMetrics {.import
 proc rect*(c: CanvasContext2d, x: float, y: float, width: float, height: float) {.importjs: "#.rect(@)".}
 
 proc stroke*(c: CanvasContext2d) {.importjs: "#.stroke()".}
+proc stroke*(c: CanvasContext2d, path: Path2D) {.importjs: "#.stroke(@)".}
 proc fill*(c: CanvasContext2d) {.importjs: "#.fill()".}
+proc fill*(c: CanvasContext2d, path: Path2D) {.importjs: "#.fill(@)".}
 proc clearRect*(c: CanvasContext2d, x: float, y: float, width: float, height: float) {.importjs: "#.clearRect(@)".}
 
 proc moveTo*(c: CanvasContext2d, x: float, y: float) {.importjs: "#.moveTo(@)".}
@@ -81,10 +85,8 @@ proc `shadowOffsetY=`*(c: CanvasContext2d, value: float) {.importjs: "#.shadowOf
 proc shadowOffsetY*(c: CanvasContext2d): float {.importjs: "#.shadowOffsetY".}
 
 
-type
-  Path2D* {.importjs.} = object
-
 proc newPath2D*(): Path2D {.importjs: "new Path2D()".}
+proc newPath2D*(data: cstring): Path2D {.importjs: "new Path2D(@)".}
 
 proc isPointInPath*(c: CanvasContext2d, x, y: float): bool {.importjs: "#.isPointInPath(@)"}
 proc isPointInPath*(c: CanvasContext2d, path: Path2D, x, y: float): bool {.importjs: "#.isPointInPath(@)"}
