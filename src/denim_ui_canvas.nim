@@ -47,7 +47,7 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     canvasContext.lineWidth = 5.0
     if props.stringData.isSome:
       canvasContext.renderPath(props.stringData.get)
-    else:
+    elif props.data.isSome:
       canvasContext.renderPath(props.data.get)
     result = canvasContext.isPointInStroke(point.x, point.y)
     canvasContext.restore()
