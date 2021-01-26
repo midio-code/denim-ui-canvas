@@ -15,21 +15,25 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
 
   let canvas = canvasElem.Canvas
 
-  const scaleFactor = 2.0
-  var size = vec2(float(window.innerWidth),float(window.innerHeight))
-  let scale = window.devicePixelRatio * scaleFactor
-
-  canvas.width = size.x
-  canvas.height = size.y
-
-  let elementWidth = canvasElem.offsetWidth
-  let elementHeight = canvasElem.offsetHeight
-  let canvasPixelScale = vec2(size.x / elementWidth * scaleFactor, size.y / elementHeight * scaleFactor)
-
-
   let canvasContext = canvas.getContext2d
-  canvasContext.scale(scale, scale)
+  let scale = 2.0
+
+  var size = vec2(float(window.innerWidth),float(window.innerHeight))
+
+  proc setCanvasProperties(): void =
+    size = vec2(float(window.innerWidth),float(window.innerHeight))
+    echo "Size: ", size
+
+    canvas.style.width = $size.x & "px"
+    canvas.style.height = $size.y & "px"
+
+    canvas.width = size.x * window.devicePixelRatio * scale
+    canvas.height = size.y * window.devicePixelRatio * scale
+
+    canvasContext.scale(window.devicePixelRatio * scale * 2.0, window.devicePixelRatio * scale * 2.0)
+  #let canvasPixelScale = vec2(size.x / elementWidth * scaleFactor, size.y / elementHeight * scaleFactor)
   #canvasContext.translate(0.5, 0.5) # https://stackoverflow.com/questions/8696631/canvas-drawings-like-lines-are-blurry
+  setCanvasProperties()
 
   proc measureText(text: string, fontSize: float, font: string, baseline: string): Vec2[float] =
     canvasContext.textBaseline = baseline
@@ -118,11 +122,8 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
 
   dom.window.addEventListener "resize", proc(event: Event) =
     let ev = cast[UIEvent](event)
-    size = vec2(float(window.innerWidth),float(window.innerHeight))
-    canvas.width = size.x
-    canvas.height = size.y
+    setCanvasProperties()
     context.dispatchWindowSizeChanged(size)
-    canvasContext.scale(scale, scale)
     context.rootElement.invalidateLayout()
 
   canvasElem.addEventListener "contextmenu", proc(event: Event) =
