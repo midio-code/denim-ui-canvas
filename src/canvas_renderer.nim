@@ -1,7 +1,10 @@
 import math
 import sugar
 import options
-import canvas
+when defined(js):
+  import canvas
+when defined(emscripten):
+  import canvas_emscripten
 import denim_ui
 
 proc renderSegment(ctx: CanvasContext2d, segment: PathSegment): void =
@@ -37,14 +40,15 @@ proc renderEllipse(ctx: CanvasContext2d, info: EllipseInfo): void =
   ctx.ellipse(0.0, 0.0, r.x, r.y, info.rotation, info.startAngle, info.endAngle)
 
 proc setShadow(ctx: CanvasContext2d, shadow: Option[Shadow]): void =
-  shadow.map(
-    proc(shadow: Shadow): void =
-      ctx.shadowBlur = shadow.size
-      let (r,g,b) = shadow.color.extractRgb()
-      ctx.setShadowColor(float(r),float(g),float(b), shadow.alpha)
-      ctx.shadowOffsetX = shadow.offset.x
-      ctx.shadowOffsetY = shadow.offset.y
-  )
+  when defined(js):
+    shadow.map(
+      proc(shadow: Shadow): void =
+        ctx.shadowBlur = shadow.size
+        let (r,g,b) = shadow.color.extractRgb()
+        ctx.setShadowColor(float(r),float(g),float(b), shadow.alpha)
+        ctx.shadowOffsetX = shadow.offset.x
+        ctx.shadowOffsetY = shadow.offset.y
+    )
 
 # TODO: Cleanup this signature, stuff has just been tacked on when neeeded
 proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInfo: Option[StrokeInfo], shadow: Option[Shadow], path: Option[Path2D] = none[Path2D]()): void =
@@ -61,7 +65,7 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
       ctx.fillStyle = $ci.fill.get()
       if path.isSome:
         let p = path.get
-        ctx.fill(p)
+        #ctx.fill(p)
       else:
         ctx.fill()
       ctx.restore()
@@ -74,7 +78,7 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
       ctx.strokeStyle = $ci.stroke.get()
       if path.isSome:
         let p = path.get
-        ctx.stroke(p)
+        #ctx.stroke(p)
       else:
         ctx.stroke()
       ctx.restore()
@@ -85,7 +89,8 @@ proc renderPath*(ctx: CanvasContext2d, segments: seq[PathSegment]): void =
     renderSegment(ctx, segment)
 
 proc renderPath*(ctx: CanvasContext2d, data: string): void =
-  ctx.stroke(newPath2D(data))
+  discard
+  #ctx.stroke(newPath2D(data))
 
 proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
   case p.kind
