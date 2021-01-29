@@ -58,12 +58,12 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
 
   # NOTE: Turning off mouse capture for the native layer while one of our elements has pointer capture
   pointerCapturedEmitter.add(
-    proc(capturer: denim_ui.Element): void =
+    proc(capturer: PointerCaptureChangedArgs): void =
       nativeContainer.style.pointerEvents = "none"
   )
 
   pointerCaptureReleasedEmitter.add(
-    proc(capturer: denim_ui.Element): void =
+    proc(capturer: PointerCaptureChangedArgs): void =
       nativeContainer.style.pointerEvents = "auto"
   )
 
