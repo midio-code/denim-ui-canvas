@@ -16,7 +16,7 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
   let canvas = canvasElem.Canvas
 
   let canvasContext = canvas.getContext2d
-  let scale = 2.0
+  let scale = 1.0
 
   var size = vec2(float(window.innerWidth),float(window.innerHeight))
 
@@ -30,7 +30,7 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     canvas.width = size.x * window.devicePixelRatio * scale
     canvas.height = size.y * window.devicePixelRatio * scale
 
-    canvasContext.scale(window.devicePixelRatio * scale * 2.0, window.devicePixelRatio * scale * 2.0)
+    canvasContext.scale(window.devicePixelRatio * scale, window.devicePixelRatio * scale)
   #let canvasPixelScale = vec2(size.x / elementWidth * scaleFactor, size.y / elementHeight * scaleFactor)
   #canvasContext.translate(0.5, 0.5) # https://stackoverflow.com/questions/8696631/canvas-drawings-like-lines-are-blurry
   setCanvasProperties()
