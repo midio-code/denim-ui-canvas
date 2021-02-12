@@ -48,7 +48,7 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     canvasContext.resetTransform()
     let worldPos = elem.actualWorldPosition
     canvasContext.translate(worldPos.x, worldPos.y)
-    canvasContext.lineWidth = 5.0
+    canvasContext.lineWidth = 14.0
     if props.stringData.isSome:
       canvasContext.renderPath(props.stringData.get)
     elif props.data.isSome:
