@@ -2,6 +2,7 @@ import dom
 import sugar
 import canvas
 import canvas_renderer
+import native_elements/text_input
 import denim_ui
 import denim_ui/gui/debug_draw
 
@@ -72,7 +73,10 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     vec2(scale, scale),
     measureText,
     hitTestPath,
-    render
+    render,
+    NativeElements(
+      createTextInput: createHtmlTextInput
+    )
   )
 
   proc renderToJsCanvas(dt: float): void =
