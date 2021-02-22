@@ -23,7 +23,6 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
 
   proc setCanvasProperties(): void =
     size = vec2(float(window.innerWidth),float(window.innerHeight))
-    echo "Size: ", size
 
     canvas.style.width = $size.x & "px"
     canvas.style.height = $size.y & "px"
