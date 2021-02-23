@@ -109,11 +109,16 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
       deltaZ: float
       deltaMode: int
 
-  dom.window.addEventListener "wheel", proc(event: Event) =
-    let ev = cast[WheelEvent](event)
-    let canvas = document.getElementById("rootCanvas")
-    let bounds = canvas.getBoundingClientRect()
-    context.dispatchWheel(ev.clientX - bounds.left, ev.clientY - bounds.top, ev.deltaX, ev.deltaY, ev.deltaZ, WheelDeltaUnit(ev.deltaMode))
+  dom.window.addEventListener(
+    "wheel",
+    proc(event: Event) =
+      let ev = cast[WheelEvent](event)
+      ev.preventDefault()
+      let canvas = document.getElementById("rootCanvas")
+      let bounds = canvas.getBoundingClientRect()
+      context.dispatchWheel(ev.clientX - bounds.left, ev.clientY - bounds.top, ev.deltaX, ev.deltaY, ev.deltaZ, WheelDeltaUnit(ev.deltaMode)),
+    AddEventListenerOptions(passive: false)
+  )
 
   dom.window.addEventListener "keydown", proc(event: Event) =
     let ev = cast[KeyboardEvent](event)
