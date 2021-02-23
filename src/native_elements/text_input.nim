@@ -21,7 +21,6 @@ type
 
 proc updateTextProps(self: HtmlTextInput): void =
   self.domElement.style.color = $self.textInputProps.color.get("black".parseColor())
-  self.domElement.style.fontSize = $self.textInputProps.fontSize.get(12.0) & "px"
 
 proc createHtmlTextInput(props: TextInputProps): dom.Element =
   result = document.createElement("INPUT")
@@ -44,8 +43,9 @@ method measureOverride(self: HtmlTextInput, availableSize: Vec2[float]): Vec2[fl
 # TODO: We are kind of misusing render here. Create a way to react to layouts instead of using render.
 method render(self: HtmlTextInput): Option[Primitive] =
   let props = self.textInputProps
-  let bounds = self.worldBoundsExpensive()
-  let fontSize = props.fontSize.get(12.0)
+  let (bounds, scale) = self.worldBoundsExpensive()
+  echo "SCALE IS : ", scale
+  let fontSize = props.fontSize.get(12.0) * max(scale.x, scale.y)
   let pos = bounds.pos
   self.domElement.style.transform = &"translate({pos.x}px,{pos.y}px)"
   self.domElement.style.background = "none"
@@ -53,7 +53,8 @@ method render(self: HtmlTextInput): Option[Primitive] =
   self.domElement.style.height = &"{bounds.height}px"
   self.domElement.style.padding = &"0 0 0 0"
   self.domElement.style.margin = &"0 0 0 0"
-  self.domElement.style.setProperty("font-size", &"{fontSize}px")
+  echo "setting font size to: ", fontSize
+  self.domElement.style.fontSize = &"{fontSize}px"
   self.updateTextProps()
   if props.text != self.domElement.innerHtml:
     self.domElement.innerHtml = props.text
