@@ -44,7 +44,6 @@ method measureOverride(self: HtmlTextInput, availableSize: Vec2[float]): Vec2[fl
 method render(self: HtmlTextInput): Option[Primitive] =
   let props = self.textInputProps
   let (bounds, scale) = self.worldBoundsExpensive()
-  echo "SCALE IS : ", scale
   let fontSize = props.fontSize.get(12.0) * max(scale.x, scale.y)
   let pos = bounds.pos
   self.domElement.style.transform = &"translate({pos.x}px,{pos.y}px)"
@@ -53,8 +52,8 @@ method render(self: HtmlTextInput): Option[Primitive] =
   self.domElement.style.height = &"{bounds.height}px"
   self.domElement.style.padding = &"0 0 0 0"
   self.domElement.style.margin = &"0 0 0 0"
-  echo "setting font size to: ", fontSize
-  self.domElement.style.fontSize = &"{fontSize}px"
+  let fontFamily = props.font.get("")
+  self.domElement.style.font= &"{fontSize}px {fontFamily}"
   self.updateTextProps()
   if props.text != self.domElement.innerHtml:
     self.domElement.innerHtml = props.text
