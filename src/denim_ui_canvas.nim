@@ -75,7 +75,17 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     render,
     NativeElements(
       createTextInput: createHtmlTextInput
-    )
+    ),
+    proc(cursor: Cursor): void =
+      let c = case cursor:
+        of Cursor.Default:
+          "default"
+        of Cursor.Clickable:
+          "pointer"
+        of Cursor.Dragging:
+          "all-scroll"
+
+      document.body.style.cursor = c
   )
 
   proc renderToJsCanvas(dt: float): void =
