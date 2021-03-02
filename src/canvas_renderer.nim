@@ -3,6 +3,7 @@ import sugar
 import options
 import canvas
 import denim_ui
+import strutils
 
 proc renderSegment(ctx: CanvasContext2d, segment: PathSegment): void =
   case segment.kind
@@ -79,7 +80,7 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
     if ci.fill.isSome():
       ctx.save()
       ctx.setShadow(shadow)
-      ctx.fillStyle = $ci.fill.get()
+      ctx.fillStyle = $ci.fill.get() & ci.alpha.map((x: byte) => x.toHex()).get("")
       if path.isSome:
         let p = path.get
         ctx.fill(p)
