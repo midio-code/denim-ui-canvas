@@ -49,7 +49,28 @@ proc setShadow(ctx: CanvasContext2d, shadow: Option[Shadow]): void =
 # TODO: Cleanup this signature, stuff has just been tacked on when neeeded
 proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInfo: Option[StrokeInfo], shadow: Option[Shadow], path: Option[Path2D] = none[Path2D]()): void =
   if strokeInfo.isSome():
-    ctx.lineWidth = strokeInfo.get().width
+    let si = strokeInfo.get
+    ctx.lineWidth = si.width
+    if si.lineDash.isSome:
+      ctx.setLineDash(si.lineDash.get)
+    if si.lineCap.isSome:
+      let lineCapValue = case si.lineCap.get:
+        of LineCap.Square:
+          "square"
+        of LineCap.Butt:
+          "butt"
+        of LineCap.Round:
+          "round"
+      ctx.lineCap = lineCapValue
+    if si.lineJoin.isSome:
+      let lineJoinValue = case si.lineJoin.get:
+        of LineJoin.Miter:
+          "miter"
+        of LineJoin.Bevel:
+          "bevel"
+        of LineJoin.Round:
+          "round"
+      ctx.lineJoin = lineJoinValue
   else:
     ctx.lineWidth = 0.0
 

@@ -15,6 +15,8 @@ type
     textAlign*: cstring
     strokeStyle*: cstring
     lineWidth*: float
+    lineCap*: cstring
+    lineJoin*: cstring
     textBaseline*: cstring
     font*: cstring
 
@@ -55,6 +57,8 @@ proc strokeRect*(c: CanvasContext2d, x: float, y: float, w: float, h: float) {.i
 proc clip*(c: CanvasContext2d) {.importjs: "#.clip()".}
 proc save*(c: CanvasContext2d) {.importjs: "#.save()".}
 proc restore*(c: CanvasContext2d) {.importjs: "#.restore()".}
+
+proc setLineDash*(c: CanvasContext2d, pattern: seq[int]) {.importjs: "#.setLineDash(@)".}
 
 
 proc transform*(
