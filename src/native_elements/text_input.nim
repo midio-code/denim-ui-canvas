@@ -3,9 +3,6 @@ import colors
 import denim_ui
 import denim_ui/gui/primitives/defaults
 
-# TODO: Move all this stuff to the canvas renderer
-
-# domElement.contains(domElement) polyfill
 proc contains(self: dom.Element, elem: dom.Element): bool {.importjs: "#.contains(@)".}
 
 var nativeContainer: dom.Element = nil
