@@ -58,12 +58,12 @@ method render(self: HtmlTextInput): Option[Primitive] =
   let fontFamily = props.font.get("")
   self.domElement.style.font= &"{fontSize}px {fontFamily}"
   self.updateTextProps()
-  if props.text != self.domElement.innerHtml:
-    self.domElement.innerHtml = props.text
   none[Primitive]()
 
 method onRooted(self: HtmlTextInput): void =
   getNativeContainer().appendChild(self.domElement)
+  if self.textInputProps.text != self.domElement.innerHtml:
+    self.domElement.value = self.textInputProps.text
   if self.textInputProps.focusWhenRooted.get(true):
     self.domElement.focus()
 
