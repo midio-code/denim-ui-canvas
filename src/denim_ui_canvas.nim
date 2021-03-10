@@ -132,11 +132,29 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
 
   dom.window.addEventListener "keydown", proc(event: Event) =
     let ev = cast[KeyboardEvent](event)
-    context.dispatchKeyDown(ev.keyCode, $ev.key)
+    var modifiers: seq[string] = @[]
+    if ev.ctrlKey:
+      modifiers.add("Ctrl")
+    if ev.shiftKey:
+      modifiers.add("Shift")
+    if ev.altKey:
+      modifiers.add("Alt")
+    if ev.metaKey:
+      modifiers.add("Meta")
+    context.dispatchKeyDown(ev.keyCode, $ev.key, modifiers)
 
   dom.window.addEventListener "keyup", proc(event: Event) =
     let ev = cast[KeyboardEvent](event)
-    context.dispatchKeyUp(ev.keyCode, $ev.key)
+    var modifiers: seq[string] = @[]
+    if ev.ctrlKey:
+      modifiers.add("Ctrl")
+    if ev.shiftKey:
+      modifiers.add("Shift")
+    if ev.altKey:
+      modifiers.add("Alt")
+    if ev.metaKey:
+      modifiers.add("Meta")
+    context.dispatchKeyUp(ev.keyCode, $ev.key, modifiers)
 
   dom.window.addEventListener "resize", proc(event: Event) =
     let ev = cast[UIEvent](event)
