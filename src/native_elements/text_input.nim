@@ -15,6 +15,7 @@ proc getNativeContainer(): dom.Element =
 type
   HtmlTextInput* = ref object of TextInput
     domElement*: dom.Element
+    isFocusedSubscription: Subscription
 
 proc updateTextProps(self: HtmlTextInput): void =
   self.domElement.style.color = $self.textInputProps.color.get("black".parseColor())
@@ -61,6 +62,13 @@ method render(self: HtmlTextInput): Option[Primitive] =
   none[Primitive]()
 
 method onRooted(self: HtmlTextInput): void =
+  # TODO: Dispose of subscription
+  self.isFocusedSubscription = self.hasFocus().subscribe(
+    proc(val: bool): void =
+      if val == false:
+        self.domElement.blur()
+  )
+
   getNativeContainer().appendChild(self.domElement)
   if self.textInputProps.text != self.domElement.innerHtml:
     self.domElement.value = self.textInputProps.text
@@ -69,6 +77,9 @@ method onRooted(self: HtmlTextInput): void =
     self.domElement.select()
 
 method onUnrooted(self: HtmlTextInput): void =
+  if not isNil(self.isFocusedSubscription):
+    self.isFocusedSubscription.dispose()
+
   let nativeContainer = getNativeContainer()
   if nativeContainer.contains(self.domElement):
     nativeContainer.removeChild(self.domElement)
@@ -82,8 +93,16 @@ proc createHtmlTextInput*(props: (ElementProps, TextInputProps), children: seq[d
       if textInputProps.onChange.isSome():
         textInputProps.onChange.get()($ev.target.value)
   )
-  result = HtmlTextInput(
+  let textInputElem = HtmlTextInput(
     textInputProps: textInputProps,
     domElement: domElement
   )
-  initElement(result, elemProps)
+
+  domElement.addEventListener(
+    "focus",
+    proc(ev: dom.Event): void =
+      textInputElem.giveFocus()
+  )
+
+  initElement(textInputElem, elemProps)
+  textInputElem
