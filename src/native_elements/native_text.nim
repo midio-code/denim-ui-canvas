@@ -13,33 +13,24 @@ proc getNativeContainer(): dom.Element =
   nativeContainer
 
 type
-  HtmlTextInput* = ref object of TextInput
+  HtmlText* = ref object of Text
     domElement*: dom.Element
 
-proc updateTextProps(self: HtmlTextInput): void =
-  self.domElement.style.color = $self.textInputProps.color.get("black".parseColor())
+proc updateTextProps(self: HtmlText): void =
+  self.domElement.style.color = $self.textProps.color.get("black".parseColor())
 
-proc createHtmlTextInput(props: TextInputProps): dom.Element =
-  result = document.createElement("INPUT")
+proc createHtmlText(props: TextProps): dom.Element =
+  result = document.createElement("DIV")
   result.style.position = "absolute"
-  # TODO: Remove or replace this: result.updateTextProps(props)
-  if props.placeholder.isSome():
-    result.setAttribute("placeholder", props.placeholder.get())
-  result.value = props.text
+  result.innerHtml = props.text
 
-method measureOverride(self: HtmlTextInput, availableSize: Vec2[float]): Vec2[float] =
-  let props = self.textInputProps
-  let actualText =
-    if props.text == "":
-      props.placeholder.get("")
-    else:
-      props.text
-
-  measureText(actualText, props.fontSize.get(12.0), props.font.get(defaults.font), "top")
+method measureOverride(self: HtmlText, availableSize: Vec2[float]): Vec2[float] =
+  self.domElement.style.width = &"{availableSize.x}px"
+  vec2(float(self.domElement.clientWidth), float(self.domElement.clientHeight))
 
 # TODO: We are kind of misusing render here. Create a way to react to layouts instead of using render.
-method render(self: HtmlTextInput): Option[Primitive] =
-  let props = self.textInputProps
+method render(self: HtmlText): Option[Primitive] =
+  let props = self.textProps
   let (bounds, scale) = self.worldBoundsExpensive()
   let fontSize = props.fontSize.get(12.0) * max(scale.x, scale.y)
   let pos = bounds.pos
@@ -60,30 +51,19 @@ method render(self: HtmlTextInput): Option[Primitive] =
   self.updateTextProps()
   none[Primitive]()
 
-method onRooted(self: HtmlTextInput): void =
+method onRooted(self: HtmlText): void =
   getNativeContainer().appendChild(self.domElement)
-  if self.textInputProps.text != self.domElement.innerHtml:
-    self.domElement.value = self.textInputProps.text
-  if self.textInputProps.focusWhenRooted.get(true):
-    self.domElement.focus()
-    self.domElement.select()
 
-method onUnrooted(self: HtmlTextInput): void =
+method onUnrooted(self: HtmlText): void =
   let nativeContainer = getNativeContainer()
   if nativeContainer.contains(self.domElement):
     nativeContainer.removeChild(self.domElement)
 
-proc createHtmlTextInput*(props: (ElementProps, TextInputProps), children: seq[denim_ui.Element] = @[]): HtmlTextInput =
-  let (elemProps, textInputProps) = props
-  let domElement = createHtmlTextInput(textInputProps)
-  domElement.addEventListener(
-    "input",
-    proc(ev: dom.Event): void =
-      if textInputProps.onChange.isSome():
-        textInputProps.onChange.get()($ev.target.value)
-  )
-  result = HtmlTextInput(
-    textInputProps: textInputProps,
+proc createHtmlText*(props: (ElementProps, TextProps), children: seq[denim_ui.Element] = @[]): HtmlText =
+  let (elemProps, textProps) = props
+  let domElement = createHtmlText(textProps)
+  result = HtmlText(
+    textProps: textProps,
     domElement: domElement
   )
   initElement(result, elemProps)

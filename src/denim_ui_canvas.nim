@@ -3,6 +3,7 @@ import sugar
 import canvas
 import canvas_renderer
 import native_elements/text_input
+import native_elements/native_text
 import denim_ui
 import denim_ui/gui/debug_draw
 
@@ -74,7 +75,8 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     hitTestPath,
     render,
     NativeElements(
-      createTextInput: createHtmlTextInput
+      createTextInput: createHtmlTextInput,
+      createNativeText: createHtmlText,
     ),
     proc(cursor: Cursor): void =
       let c = case cursor:
@@ -93,19 +95,19 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     if primitive.isSome():
       canvasContext.renderPrimitives(primitive.get(), size)
 
-  dom.window.addEventListener "pointerdown", proc(event: Event) =
+  canvasElem.addEventListener "pointerdown", proc(event: Event) =
     let ev = cast[MouseEvent](event)
     let canvas = document.getElementById("rootCanvas")
     let bounds = canvas.getBoundingClientRect()
     context.dispatchPointerDown(ev.clientX - bounds.left, ev.clientY - bounds.top, cast[PointerIndex](ev.button))
 
-  dom.window.addEventListener "pointerup", proc(event: Event) =
+  canvasElem.addEventListener "pointerup", proc(event: Event) =
     let ev = cast[MouseEvent](event)
     let canvas = document.getElementById("rootCanvas")
     let bounds = canvas.getBoundingClientRect()
     context.dispatchPointerUp(ev.clientX - bounds.left, ev.clientY - bounds.top, cast[PointerIndex](ev.button))
 
-  dom.window.addEventListener "pointermove", proc(event: Event) =
+  canvasElem.addEventListener "pointermove", proc(event: Event) =
     let ev = cast[MouseEvent](event)
     let canvas = document.getElementById("rootCanvas")
     let bounds = canvas.getBoundingClientRect()
@@ -119,7 +121,7 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
       deltaZ: float
       deltaMode: int
 
-  dom.window.addEventListener(
+  canvasElem.addEventListener(
     "wheel",
     proc(event: Event) =
       let ev = cast[WheelEvent](event)
@@ -132,6 +134,7 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
 
   dom.window.addEventListener "keydown", proc(event: Event) =
     let ev = cast[KeyboardEvent](event)
+    echo "KEY: ", $ev.key
     var modifiers: seq[string] = @[]
     if ev.ctrlKey:
       modifiers.add("Ctrl")
