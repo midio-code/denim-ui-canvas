@@ -171,7 +171,9 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
   nativeContainer.addEventListener "contextmenu", proc(event: Event) =
     event.preventDefault()
     event.stopPropagation()
-
+  nativeContainer.addEventListener "dblclick", proc(event: Event) =
+    event.preventDefault()
+    event.stopPropagation()
 
   var isAnimating = true
 
