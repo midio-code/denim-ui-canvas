@@ -39,15 +39,16 @@ method render(self: HtmlText): Option[Primitive] =
   self.domElement.style.borderStyle = "none"
   self.domElement.style.textOverflow = "visible"
   self.domElement.style.overflow = "visible"
-  self.domElement.style.lineHeight = "normal"
+  self.domElement.style.lineHeight = "1.0"
   self.domElement.style.width = &"{bounds.width}px"
   # TODO: Fix hack of adding 6 to text input height to avoid clipping
   self.domElement.style.height = &"{bounds.height + 6.0}px"
   self.domElement.style.transform = &"translate({pos.x}px,{pos.y - 5.0}px)"
   self.domElement.style.padding = &"0 0 0 0"
   self.domElement.style.margin = &"0 0 0 0"
-  let fontFamily = props.font.get("")
-  self.domElement.style.font= &"{fontSize}px {fontFamily}"
+  if props.font.isSome:
+    self.domElement.style.fontFamily = props.font.get
+  self.domElement.style.fontSize = &"{fontSize}px"
   self.updateTextProps()
   none[Primitive]()
 
