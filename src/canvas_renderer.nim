@@ -139,6 +139,8 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
 proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
   proc renderInner(primitive: Primitive): void =
     ctx.save()
+    if primitive.opacity.isSome:
+      ctx.globalAlpha = primitive.opacity.get
 
     ctx.translate(primitive.bounds.x, primitive.bounds.y)
     for transform in  primitive.transform:

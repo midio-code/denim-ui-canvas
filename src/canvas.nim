@@ -19,6 +19,7 @@ type
     lineJoin*: cstring
     textBaseline*: cstring
     font*: cstring
+    globalAlpha*: float
 
   TextMetrics {.importc.} = object
     width*: float
