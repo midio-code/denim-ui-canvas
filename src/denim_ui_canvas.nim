@@ -134,7 +134,6 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
 
   dom.window.addEventListener "keydown", proc(event: Event) =
     let ev = cast[KeyboardEvent](event)
-    echo "KEY: ", $ev.key
     var modifiers: seq[string] = @[]
     if ev.ctrlKey:
       modifiers.add("Ctrl")

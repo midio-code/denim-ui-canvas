@@ -23,7 +23,6 @@ proc updateTextProps(self: HtmlTextInput): void =
 
 proc createHtmlTextInput(props: TextInputProps): dom.Element =
   if props.wordWrap:
-    echo "Creating text area"
     result = document.createElement("TEXTAREA")
     #result.style.setProperty("word-wrap", "normal")
     result.style.setProperty("word-break", "normal")
@@ -54,7 +53,6 @@ method measureOverride(self: HtmlTextInput, availableSize: Vec2[float]): Vec2[fl
     props.wordWrap,
     availableSize
   )
-  echo "Result is: ", totalSize
   totalSize
 
 # TODO: We are kind of misusing render here. Create a way to react to layouts instead of using render.
