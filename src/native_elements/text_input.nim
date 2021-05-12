@@ -2,6 +2,7 @@ import options, strformat, sugar, dom
 import colors
 import denim_ui
 import denim_ui/gui/primitives/defaults
+import denim_ui/gui/primitives/text
 
 proc contains(self: dom.Element, elem: dom.Element): bool {.importjs: "#.contains(@)".}
 
@@ -21,7 +22,21 @@ proc updateTextProps(self: HtmlTextInput): void =
   self.domElement.style.color = $self.textInputProps.color.get("black".parseColor())
 
 proc createHtmlTextInput(props: TextInputProps): dom.Element =
-  result = document.createElement("INPUT")
+  if props.wordWrap:
+    result = document.createElement("TEXTAREA")
+    result.addEventListener("keydown", proc(event: Event) =
+      let ev = cast[KeyboardEvent](event)
+      if $ev.key == "Enter" and props.preventNewLineOnEnter:
+        event.preventDefault()
+    )
+    #result.style.setProperty("word-wrap", "normal")
+    result.style.setProperty("word-break", "normal")
+    result.style.setProperty("wrap", "soft")
+    result.style.setProperty("overflow", "hidden")
+    result.style.setProperty("resize", "none")
+    result.style.setProperty("line-height", "1.0")
+  else:
+    result = document.createElement("INPUT")
   result.style.position = "absolute"
   # TODO: Remove or replace this: result.updateTextProps(props)
   if props.placeholder.isSome():
@@ -36,7 +51,14 @@ method measureOverride(self: HtmlTextInput, availableSize: Vec2[float]): Vec2[fl
     else:
       props.text
 
-  measureText(actualText, props.fontSize.get(12.0), props.font.get(defaults.font), "top")
+  let (lines, totalSize) = measureMultilineText(
+    props.text,
+    props.font.get(defaults.font),
+    props.fontSize.get(defaults.fontSize),
+    props.wordWrap,
+    availableSize
+  )
+  totalSize
 
 # TODO: We are kind of misusing render here. Create a way to react to layouts instead of using render.
 method render(self: HtmlTextInput): Option[Primitive] =
@@ -47,17 +69,21 @@ method render(self: HtmlTextInput): Option[Primitive] =
   self.domElement.style.background = "none"
   self.domElement.style.outline = "none"
   self.domElement.style.borderStyle = "none"
+  if not self.textInputProps.wordWrap:
+    self.domElement.style.overflow = "visible"
+    self.domElement.style.lineHeight = "normal"
+    # TODO: Fix hack of adding 6 to text input height to avoid clipping
+    self.domElement.style.height = &"{bounds.height + 6.0}px"
+  else:
+    self.domElement.style.height = &"{bounds.height}px"
   self.domElement.style.textOverflow = "visible"
-  self.domElement.style.overflow = "visible"
-  self.domElement.style.lineHeight = "normal"
   self.domElement.style.width = &"{bounds.width}px"
-  # TODO: Fix hack of adding 6 to text input height to avoid clipping
-  self.domElement.style.height = &"{bounds.height + 6.0}px"
   self.domElement.style.transform = &"translate({pos.x}px,{pos.y - 5.0}px)"
   self.domElement.style.padding = &"0 0 0 0"
   self.domElement.style.margin = &"0 0 0 0"
-  let fontFamily = props.font.get("")
-  self.domElement.style.font= &"{fontSize}px {fontFamily}"
+  self.domElement.style.fontSize = &"{fontSize}px"
+  if props.font.isSome:
+    self.domElement.style.fontFamily = props.font.get
   self.updateTextProps()
   if props.text != self.domElement.value:
     self.domElement.value = props.text
