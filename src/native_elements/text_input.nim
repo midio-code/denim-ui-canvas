@@ -24,6 +24,11 @@ proc updateTextProps(self: HtmlTextInput): void =
 proc createHtmlTextInput(props: TextInputProps): dom.Element =
   if props.wordWrap:
     result = document.createElement("TEXTAREA")
+    result.addEventListener("keydown", proc(event: Event) =
+      let ev = cast[KeyboardEvent](event)
+      if $ev.key == "Enter" and props.preventNewLineOnEnter:
+        event.preventDefault()
+    )
     #result.style.setProperty("word-wrap", "normal")
     result.style.setProperty("word-break", "normal")
     result.style.setProperty("wrap", "soft")
