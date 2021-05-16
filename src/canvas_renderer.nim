@@ -37,6 +37,11 @@ proc renderEllipse(ctx: CanvasContext2d, info: EllipseInfo): void =
     r = info.radius
   ctx.ellipse(0.0, 0.0, r.x, r.y, info.rotation, info.startAngle, info.endAngle)
 
+proc renderImage(ctx: CanvasContext2d, bounds: Bounds, info: ImageInfo): void =
+  let image = newImage()
+  image.src = info.uri
+  ctx.drawImage(image, bounds.pos.x, bounds.pos.y, bounds.size.x, bounds.size.y)
+
 proc setShadow(ctx: CanvasContext2d, shadow: Option[Shadow]): void =
   shadow.map(
     proc(shadow: Shadow): void =
@@ -130,6 +135,9 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
     let info = p.ellipseInfo
     renderEllipse(ctx, info)
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
+  of PrimitiveKind.Image:
+    let info = p.imageInfo
+    ctx.renderImage(p.bounds, info)
   of PrimitiveKind.Rectangle:
     let info = p.rectangleInfo
     ctx.beginPath()

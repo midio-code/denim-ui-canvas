@@ -61,6 +61,11 @@ proc restore*(c: CanvasContext2d) {.importjs: "#.restore()".}
 
 proc setLineDash*(c: CanvasContext2d, pattern: seq[int]) {.importjs: "#.setLineDash(@)".}
 
+type Image* {.importc.} = ref object
+  src*: cstring
+
+proc newImage*(): Image {.importjs: "new Image()".}
+proc drawImage*(ctx: CanvasContext2d, img: Image, x, y, w, h: float): void {.importjs: "#.drawImage(@)".}
 
 proc transform*(
   c: CanvasContext2d,
