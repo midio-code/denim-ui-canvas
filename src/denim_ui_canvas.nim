@@ -1,4 +1,5 @@
 import dom
+import strformat
 import sugar
 import canvas
 import canvas_renderer
@@ -36,9 +37,9 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
   #canvasContext.translate(0.5, 0.5) # https://stackoverflow.com/questions/8696631/canvas-drawings-like-lines-are-blurry
   setCanvasProperties()
 
-  proc measureText(text: string, fontSize: float, fontFamily: string, baseline: string): Vec2[float] =
+  proc measureText(text: string, fontSize: float, fontFamily: string, fontWeight: int, baseline: string): Vec2[float] =
     canvasContext.textBaseline = baseline
-    canvasContext.font = $fontSize & "px " & fontFamily
+    canvasContext.font = &"{$fontWeight} {$fontSize}px {fontFamily}"
     let measured = canvas_measureText(canvasContext, text)
     result = vec2(measured.width, fontSize)
 

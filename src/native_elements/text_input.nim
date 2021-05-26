@@ -55,6 +55,7 @@ method measureOverride(self: HtmlTextInput, availableSize: Vec2[float]): Vec2[fl
     props.text,
     props.fontFamily.get(defaults.fontFamily),
     props.fontSize.get(defaults.fontSize),
+    props.fontWeight.get(defaults.fontWeight),
     props.wordWrap,
     availableSize
   )
@@ -80,7 +81,10 @@ method render(self: HtmlTextInput): Option[Primitive] =
     self.domElement.style.height = &"{bounds.height}px"
   self.domElement.style.textOverflow = "visible"
   self.domElement.style.width = &"{bounds.width}px"
-  self.domElement.style.transform = &"translate({pos.x}px,{pos.y - 5.0}px)"
+  if self.textInputProps.wordWrap:
+    self.domElement.style.transform = &"translate({pos.x}px,{pos.y}px)"
+  else:
+    self.domElement.style.transform = &"translate({pos.x}px,{pos.y - 5.0}px)"
   self.domElement.style.padding = &"0 0 0 0"
   self.domElement.style.margin = &"0 0 0 0"
   self.domElement.style.fontSize = &"{fontSize}px"
