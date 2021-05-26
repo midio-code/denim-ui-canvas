@@ -46,8 +46,8 @@ method render(self: HtmlText): Option[Primitive] =
   self.domElement.style.transform = &"translate({pos.x}px,{pos.y - 5.0}px)"
   self.domElement.style.padding = &"0 0 0 0"
   self.domElement.style.margin = &"0 0 0 0"
-  if props.font.isSome:
-    self.domElement.style.fontFamily = props.font.get
+  if props.fontFamily.isSome:
+    self.domElement.style.fontFamily = props.fontFamily.get
   self.domElement.style.fontSize = &"{fontSize}px"
   self.updateTextProps()
   none[Primitive]()

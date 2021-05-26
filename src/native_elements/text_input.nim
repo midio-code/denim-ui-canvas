@@ -53,7 +53,7 @@ method measureOverride(self: HtmlTextInput, availableSize: Vec2[float]): Vec2[fl
 
   let (lines, totalSize) = measureMultilineText(
     props.text,
-    props.font.get(defaults.font),
+    props.fontFamily.get(defaults.fontFamily),
     props.fontSize.get(defaults.fontSize),
     props.wordWrap,
     availableSize
@@ -82,8 +82,8 @@ method render(self: HtmlTextInput): Option[Primitive] =
   self.domElement.style.padding = &"0 0 0 0"
   self.domElement.style.margin = &"0 0 0 0"
   self.domElement.style.fontSize = &"{fontSize}px"
-  if props.font.isSome:
-    self.domElement.style.fontFamily = props.font.get
+  if props.fontFamily.isSome:
+    self.domElement.style.fontFamily = props.fontFamily.get
   self.updateTextProps()
   if props.text != self.domElement.value:
     self.domElement.value = props.text
