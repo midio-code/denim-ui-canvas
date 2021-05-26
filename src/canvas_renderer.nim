@@ -25,7 +25,7 @@ proc renderText(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], textInfo: Te
   ctx.fillStyle = $colorInfo.map(x => x.fill.get(colRed)).get(colBrown)
   ctx.textAlign = textInfo.alignment
   ctx.textBaseline = textInfo.textBaseline
-  ctx.font = &"{$textInfo.fontWeight} {$textInfo.fontSize}px {textInfo.fontFamily}"
+  ctx.font = &"{$textInfo.fontWeight} {$textInfo.fontStyle} {$textInfo.fontSize}px {textInfo.fontFamily}"
   ctx.fillText(textInfo.text, 0.0, 0.0)
 
 proc renderCircle(ctx: CanvasContext2d, radius: float): void =

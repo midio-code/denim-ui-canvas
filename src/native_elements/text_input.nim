@@ -65,6 +65,8 @@ method render(self: HtmlTextInput): Option[Primitive] =
   let props = self.textInputProps
   let (bounds, scale) = self.worldBoundsExpensive()
   let fontSize = props.fontSize.get(12.0) * max(scale.x, scale.y)
+  let fontWeight = props.fontWeight.get(400)
+  let fontStyle = props.fontStyle.get("normal")
   let pos = bounds.pos
   self.domElement.style.background = "none"
   self.domElement.style.outline = "none"
@@ -82,6 +84,8 @@ method render(self: HtmlTextInput): Option[Primitive] =
   self.domElement.style.padding = &"0 0 0 0"
   self.domElement.style.margin = &"0 0 0 0"
   self.domElement.style.fontSize = &"{fontSize}px"
+  self.domElement.style.fontWeight = $fontWeight
+  self.domElement.style.fontStyle = &"{fontStyle}"
   if props.fontFamily.isSome:
     self.domElement.style.fontFamily = props.fontFamily.get
   self.updateTextProps()
