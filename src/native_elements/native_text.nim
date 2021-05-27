@@ -1,5 +1,4 @@
 import options, strformat, sugar, dom
-import colors
 import denim_ui
 import denim_ui/gui/primitives/defaults
 
@@ -17,7 +16,7 @@ type
     domElement*: dom.Element
 
 proc updateTextProps(self: HtmlText): void =
-  self.domElement.style.color = $self.textProps.color.get("black".parseColor())
+  self.domElement.style.color = $self.textProps.color.get("#000000".parseColor())
 
 proc createHtmlText(props: TextProps): dom.Element =
   result = document.createElement("DIV")

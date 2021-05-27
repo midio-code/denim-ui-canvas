@@ -22,7 +22,8 @@ proc renderSegment(ctx: CanvasContext2d, segment: PathSegment): void =
     ctx.closePath()
 
 proc renderText(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], textInfo: TextInfo): void =
-  ctx.fillStyle = $colorInfo.map(x => x.fill.get(colRed)).get(colBrown)
+  if colorInfo.isSome and colorInfo.get.fill.isSome:
+    ctx.fillStyle = $colorInfo.get.fill.get
   ctx.textAlign = textInfo.alignment
   ctx.textBaseline = textInfo.textBaseline
   ctx.font = &"{$textInfo.fontWeight} {$textInfo.fontStyle} {$textInfo.fontSize}px {textInfo.fontFamily}"
@@ -47,8 +48,12 @@ proc setShadow(ctx: CanvasContext2d, shadow: Option[Shadow]): void =
   shadow.map(
     proc(shadow: Shadow): void =
       ctx.shadowBlur = shadow.size
-      let (r,g,b) = shadow.color.extractRgb()
-      ctx.setShadowColor(float(r),float(g),float(b), shadow.alpha)
+      let
+        r = shadow.color.r
+        g = shadow.color.g
+        b = shadow.color.b
+        a = shadow.color.a
+      ctx.setShadowColor(float(r),float(g),float(b),float(a) / 255.0)
       ctx.shadowOffsetX = shadow.offset.x
       ctx.shadowOffsetY = shadow.offset.y
   )
@@ -86,7 +91,7 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
     if ci.fill.isSome():
       ctx.save()
       ctx.setShadow(shadow)
-      ctx.fillStyle = $ci.fill.get() & ci.alpha.map((x: byte) => x.toHex()).get("")
+      ctx.fillStyle = $ci.fill.get()
       if path.isSome:
         let p = path.get
         ctx.fill(p)

@@ -1,5 +1,4 @@
 import options, strformat, sugar, dom
-import colors
 import denim_ui
 import denim_ui/gui/primitives/defaults
 import denim_ui/gui/primitives/text
@@ -19,7 +18,7 @@ type
     isFocusedSubscription: Subscription
 
 proc updateTextProps(self: HtmlTextInput): void =
-  self.domElement.style.color = $self.textInputProps.color.get("black".parseColor())
+  self.domElement.style.color = $self.textInputProps.color.get("#000000".parseColor())
 
 proc createHtmlTextInput(props: TextInputProps): dom.Element =
   if props.wordWrap:
