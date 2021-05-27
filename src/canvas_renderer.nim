@@ -91,7 +91,29 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
     if ci.fill.isSome():
       ctx.save()
       ctx.setShadow(shadow)
-      ctx.fillStyle = $ci.fill.get()
+      let fill = ci.fill.get
+      case fill.kind:
+        of ColorStyleKind.Solid:
+          ctx.fillStyle = $fill
+        of ColorStyleKind.Gradient:
+          let stops = fill.gradient.stops
+          let gradient = case fill.gradient.kind:
+            of GradientKind.Linear:
+              let info = fill.gradient.linearInfo
+              ctx.createLinearGradient(info.startPoint.x, info.startPoint.x, info.endPoint.x, info.endPoint.y)
+            of GradientKind.Radial:
+              let info = fill.gradient.radialInfo
+              ctx.createRadialGradient(
+                info.startCircle.center.x,
+                info.startCircle.center.y,
+                info.startCircle.radius,
+                info.endCircle.center.x,
+                info.endCircle.center.y,
+                info.endCircle.radius
+              )
+          for stop in stops:
+            gradient.addColorStop(stop.position, $stop.color)
+          ctx.setFillStyle(gradient)
       if path.isSome:
         let p = path.get
         ctx.fill(p)

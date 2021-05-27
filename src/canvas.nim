@@ -3,6 +3,7 @@ import denim_ui
 import dom
 
 type
+
   Canvas* = ref CanvasObj
   CanvasObj {.importc.} = object of dom.Element
     width*: float
@@ -23,6 +24,8 @@ type
 
   TextMetrics {.importc.} = object
     width*: float
+
+  Gradient {.importc, nodecl.} = ref object
 
   Path2D* {.importjs.} = ref object
 
@@ -102,3 +105,12 @@ proc isPointInPath*(c: CanvasContext2d, x, y: float): bool {.importjs: "#.isPoin
 proc isPointInPath*(c: CanvasContext2d, path: Path2D, x, y: float): bool {.importjs: "#.isPointInPath(@)"}
 proc isPointInStroke*(c: CanvasContext2d, x, y: float): bool {.importjs: "#.isPointInStroke(@)"}
 proc isPointInStroke*(c: CanvasContext2d, path: Path2D, x, y: float): bool {.importjs: "#.isPointInStroke(@)"}
+
+
+
+proc createLinearGradient*(c: CanvasContext2d, x0, y0, x1, y1: float): Gradient {.importjs: "#.createLinearGradient(@)"}
+proc createRadialGradient*(c: CanvasContext2d, x0, y0, r0, x1, y1, r1: float): Gradient {.importjs: "#.createRadialGradient(@)"}
+
+proc addColorStop*(self: Gradient, pos: float, color: cstring): void {.importjs: "#.addColorStop(@)"}
+
+proc setFillStyle*(self: CanvasContext2d, grad: Gradient): void {.importjs: "#.fillStyle = #".}
