@@ -6,7 +6,6 @@ import canvas_renderer
 import native_elements/text_input
 import native_elements/native_text
 import denim_ui
-import denim_ui/gui/debug_draw
 
 proc renderPrimitives(canvasContext: CanvasContext2d, primitive: Primitive, size: Vec2[float]): void =
   canvasContext.clearRect(0.0, 0.0, size.x, size.y)
