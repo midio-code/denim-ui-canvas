@@ -30,7 +30,10 @@ method measureOverride(self: HtmlText, availableSize: Vec2[float]): Vec2[float] 
 # TODO: We are kind of misusing render here. Create a way to react to layouts instead of using render.
 method render(self: HtmlText): Option[Primitive] =
   let props = self.textProps
-  let (bounds, scale) = self.worldBoundsExpensive()
+  let
+    wbe = self.worldBoundsExpensive()
+    bounds = wbe.bounds
+    scale = wbe.scale
   let fontSize = props.fontSize.get(12.0) * max(scale.x, scale.y)
   let pos = bounds.pos
   self.domElement.style.background = "none"
