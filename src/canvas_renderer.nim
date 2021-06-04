@@ -173,31 +173,28 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
 
 proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
-  proc renderInner(primitive: Primitive): void =
-    ctx.save()
-    if primitive.opacity.isSome:
-      ctx.globalAlpha = primitive.opacity.get
+  ctx.save()
+  if primitive.opacity.isSome:
+    ctx.globalAlpha = primitive.opacity.get
 
-    ctx.translate(primitive.bounds.x, primitive.bounds.y)
-    for transform in  primitive.transform:
-      case transform.kind:
-        of Scaling:
-          ctx.scale(
-            transform.scale.x,
-            transform.scale.y
-          )
-        of Translation:
-          ctx.translate(transform.translation.x, transform.translation.y)
-        of Rotation:
-          ctx.rotate(transform.rotation)
-    if primitive.clipToBounds:
-      ctx.beginPath()
-      let cb = primitive.bounds
-      ctx.rect(0.0, 0.0, cb.size.x, cb.size.y)
-      ctx.clip()
-    ctx.renderPrimitive(primitive)
-    for p in primitive.children:
-      renderInner(p)
-    ctx.restore()
-
-  renderInner(primitive)
+  ctx.translate(primitive.bounds.x, primitive.bounds.y)
+  for transform in  primitive.transform:
+    case transform.kind:
+      of Scaling:
+        ctx.scale(
+          transform.scale.x,
+          transform.scale.y
+        )
+      of Translation:
+        ctx.translate(transform.translation.x, transform.translation.y)
+      of Rotation:
+        ctx.rotate(transform.rotation)
+  if primitive.clipToBounds:
+    ctx.beginPath()
+    let cb = primitive.bounds
+    ctx.rect(0.0, 0.0, cb.size.x, cb.size.y)
+    ctx.clip()
+  ctx.renderPrimitive(primitive)
+  for p in primitive.children:
+    ctx.render(p)
+  ctx.restore()
