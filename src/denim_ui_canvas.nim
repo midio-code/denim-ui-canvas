@@ -112,8 +112,47 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     let bounds = canvas.getBoundingClientRect()
     context.dispatchPointerUp(ev.clientX - bounds.left, ev.clientY - bounds.top, cast[PointerIndex](ev.button))
 
+  # TODO: We do this so that we can detect if any of these were pressed or release while outside the window.
+  # We should find a way to handle this case for all keys. The reason we do it for these keys is because they are
+  # included in the pointer events for some reason.
+  var shiftDown = false
+  var controlDown = false
+  var altDown = false
+
+  proc modifiersList[T](ev: T): seq[string] =
+    if ev.ctrlKey:
+      result.add("Ctrl")
+    if ev.shiftKey:
+      result.add("Shift")
+    if ev.altKey:
+      result.add("Alt")
+    if ev.metaKey:
+      result.add("Meta")
+
   canvasElem.addEventListener "pointermove", proc(event: Event) =
     let ev = cast[MouseEvent](event)
+
+    if ev.ctrlKey != controlDown:
+      controlDown = ev.ctrlKey
+      if controlDown:
+        context.dispatchKeyDown("Ctrl", modifiersList(ev))
+      else:
+        context.dispatchKeyUp("Ctrl", modifiersList(ev))
+
+    if ev.shiftKey != shiftDown:
+      shiftDown = ev.shiftKey
+      if shiftDown:
+        context.dispatchKeyDown("Shift", modifiersList(ev))
+      else:
+        context.dispatchKeyUp("Shift", modifiersList(ev))
+
+    if ev.altKey != altDown:
+      altDown = ev.altKey
+      if altDown:
+        context.dispatchKeyDown("Alt", modifiersList(ev))
+      else:
+        context.dispatchKeyUp("Alt", modifiersList(ev))
+
     let canvas = document.getElementById("rootCanvas")
     let bounds = canvas.getBoundingClientRect()
     context.dispatchPointerMove(ev.clientX - bounds.left, ev.clientY - bounds.top)
@@ -139,29 +178,25 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
 
   dom.window.addEventListener "keydown", proc(event: Event) =
     let ev = cast[KeyboardEvent](event)
-    var modifiers: seq[string] = @[]
-    if ev.ctrlKey:
-      modifiers.add("Ctrl")
-    if ev.shiftKey:
-      modifiers.add("Shift")
-    if ev.altKey:
-      modifiers.add("Alt")
-    if ev.metaKey:
-      modifiers.add("Meta")
-    context.dispatchKeyDown(ev.keyCode, $ev.key, modifiers)
+    var modifiers: seq[string] = modifiersList(ev)
+    if $ev.key == "Shift":
+      shiftDown = true
+    if $ev.key == "Ctrl":
+      controlDown = true
+    if $ev.key == "Alt":
+      altDown = true
+    context.dispatchKeyDown($ev.key, modifiers)
 
   dom.window.addEventListener "keyup", proc(event: Event) =
     let ev = cast[KeyboardEvent](event)
-    var modifiers: seq[string] = @[]
-    if ev.ctrlKey:
-      modifiers.add("Ctrl")
-    if ev.shiftKey:
-      modifiers.add("Shift")
-    if ev.altKey:
-      modifiers.add("Alt")
-    if ev.metaKey:
-      modifiers.add("Meta")
-    context.dispatchKeyUp(ev.keyCode, $ev.key, modifiers)
+    var modifiers: seq[string] = modifiersList(ev)
+    if $ev.key == "Shift":
+      shiftDown = false
+    if $ev.key == "Ctrl":
+      controlDown = false
+    if $ev.key == "Alt":
+      altDown = false
+    context.dispatchKeyUp($ev.key, modifiers)
 
   dom.window.addEventListener "resize", proc(event: Event) =
     let ev = cast[UIEvent](event)
@@ -188,6 +223,8 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     if renderRequested:
       render()
       renderRequested = false
+
+
     discard dom.window.requestAnimationFrame(frame)
 
   frame(lastTime)
