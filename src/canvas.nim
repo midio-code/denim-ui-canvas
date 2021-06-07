@@ -29,8 +29,7 @@ type
 
   Path2D* {.importjs.} = ref object
 
-proc getContext2d*(c: Canvas): CanvasContext2d =
-  {.emit: "`result` = `c`.getContext('2d');".}
+proc getContext2d*(c: Canvas, alpha: bool = false): CanvasContext2d {.importjs: "#.getContext('2d', @)"}
 
 proc beginPath*(c: CanvasContext2d) {.importjs: "#.beginPath()".}
 proc strokeText*(c: CanvasContext2d, txt: cstring, x, y: float) {.importjs: "#.strokeText(@)".}

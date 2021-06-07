@@ -17,9 +17,6 @@ type
     domElement*: dom.Element
     isFocusedSubscription: Subscription
 
-proc updateTextProps(self: HtmlTextInput): void =
-  self.domElement.style.color = $self.textInputProps.color.get("#000000".parseColor())
-
 proc createHtmlTextInput(props: TextInputProps): dom.Element =
   if props.wordWrap:
     result = document.createElement("TEXTAREA")
@@ -37,7 +34,6 @@ proc createHtmlTextInput(props: TextInputProps): dom.Element =
   else:
     result = document.createElement("INPUT")
   result.style.position = "absolute"
-  # TODO: Remove or replace this: result.updateTextProps(props)
   if props.placeholder.isSome():
     result.setAttribute("placeholder", props.placeholder.get())
   result.value = props.text
@@ -60,8 +56,7 @@ method measureOverride(self: HtmlTextInput, availableSize: Vec2[float]): Vec2[fl
   )
   totalSize
 
-# TODO: We are kind of misusing render here. Create a way to react to layouts instead of using render.
-method render(self: HtmlTextInput): Option[Primitive] =
+method updateNativeElement(self: HtmlTextInput): void =
   let props = self.textInputProps
   let
     wbe = self.worldBoundsExpensive()
@@ -94,13 +89,21 @@ method render(self: HtmlTextInput): Option[Primitive] =
   self.domElement.style.fontStyle = &"{fontStyle}"
   if props.fontFamily.isSome:
     self.domElement.style.fontFamily = props.fontFamily.get
-  self.updateTextProps()
+  self.domElement.style.color = $self.textInputProps.color.get("#000000".parseColor())
   if props.text != self.domElement.value:
     self.domElement.value = props.text
-  none[Primitive]()
+
+# TODO: Now we update all the native properties every frame while the native
+# element is rooted. This is fine for now since we mostly just have one or two active at the same time,
+# but will have to be fixed eventually.
+var disposeUpdateHandler: () -> void
 
 method onRooted(self: HtmlTextInput): void =
   # TODO: Dispose of subscription
+  disposeUpdateHandler = addBeforeRenderListener(
+    proc() =
+      updateNativeElement(self)
+  )
   self.isFocusedSubscription = self.hasFocus().subscribe(
     proc(val: bool): void =
       if val == false:
@@ -115,6 +118,8 @@ method onRooted(self: HtmlTextInput): void =
     self.domElement.select()
 
 method onUnrooted(self: HtmlTextInput): void =
+  disposeUpdateHandler()
+  disposeUpdateHandler = nil
   if not isNil(self.isFocusedSubscription):
     self.isFocusedSubscription.dispose()
 

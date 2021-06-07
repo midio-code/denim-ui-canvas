@@ -17,7 +17,7 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
 
   let canvas = canvasElem.Canvas
 
-  let canvasContext = canvas.getContext2d
+  let canvasContext = canvas.getContext2d()
   let scale = 1.0
 
   var size = vec2(float(window.innerWidth),float(window.innerHeight))
@@ -68,11 +68,16 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
       nativeContainer.style.pointerEvents = "auto"
   )
 
+  var renderRequested = false
+  proc requestRerender() =
+    renderRequested = true
+
   let context = denim_ui.init(
     size,
     vec2(scale, scale),
     measureText,
     hitTestPath,
+    requestRerender,
     render,
     NativeElements(
       createTextInput: createHtmlTextInput,
@@ -90,8 +95,8 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
       document.body.style.cursor = c
   )
 
-  proc renderToJsCanvas(dt: float): void =
-    let primitive = denim_ui.render(context, dt)
+  proc render(): void =
+    let primitive = denim_ui.render(context)
     if primitive.isSome():
       canvasContext.renderPrimitives(primitive.get(), size)
 
@@ -181,8 +186,10 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     let dt = time - lastTime
     lastTime = time
 
-    renderToJsCanvas(dt)
-
+    context.update(dt)
+    if renderRequested:
+      render()
+      renderRequested = false
     discard dom.window.requestAnimationFrame(frame)
 
   frame(lastTime)
