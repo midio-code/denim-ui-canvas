@@ -179,8 +179,6 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     event.preventDefault()
     event.stopPropagation()
 
-  var isAnimating = true
-
   var lastTime = 0.0
   proc frame(time: float): void =
     let dt = time - lastTime
