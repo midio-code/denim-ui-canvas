@@ -26,7 +26,7 @@ proc renderText(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], textInfo: Te
     ctx.fillStyle = $colorInfo.get.fill.get
   ctx.textAlign = textInfo.alignment
   ctx.textBaseline = textInfo.textBaseline
-  ctx.font = &"{$textInfo.fontWeight} {$textInfo.fontStyle} {$textInfo.fontSize}px {textInfo.fontFamily}"
+  ctx.font = $textInfo.fontWeight & " " & $textInfo.fontStyle & " " & $textInfo.fontSize & "px " & textInfo.fontFamily
   ctx.fillText(textInfo.text, 0.0, 0.0)
 
 proc renderCircle(ctx: CanvasContext2d, radius: float): void =
@@ -45,18 +45,17 @@ proc renderImage(ctx: CanvasContext2d, bounds: Bounds, info: ImageInfo): void =
   ctx.drawImage(image, bounds.pos.x, bounds.pos.y, bounds.size.x, bounds.size.y)
 
 proc setShadow(ctx: CanvasContext2d, shadow: Option[Shadow]): void =
-  shadow.map(
-    proc(shadow: Shadow): void =
-      ctx.shadowBlur = shadow.size
-      let
-        r = shadow.color.r
-        g = shadow.color.g
-        b = shadow.color.b
-        a = shadow.color.a
-      ctx.setShadowColor(float(r),float(g),float(b),float(a) / 255.0)
-      ctx.shadowOffsetX = shadow.offset.x
-      ctx.shadowOffsetY = shadow.offset.y
-  )
+  if shadow.isSome:
+    let s = shadow.get
+    ctx.shadowBlur = s.size
+    let
+      r = s.color.r
+      g = s.color.g
+      b = s.color.b
+      a = s.color.a
+    ctx.setShadowColor(float(r),float(g),float(b),float(a) / 255.0)
+    ctx.shadowOffsetX = s.offset.x
+    ctx.shadowOffsetY = s.offset.y
 
 # TODO: Cleanup this signature, stuff has just been tacked on when neeeded
 proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInfo: Option[StrokeInfo], shadow: Option[Shadow], path: Option[Path2D] = none[Path2D]()): void =
@@ -120,7 +119,7 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
       else:
         ctx.fill()
       ctx.restore()
-    if ci.stroke.isSome() and strokeInfo.map(x => x.width).get(0.0) > 0.0:
+    if ci.stroke.isSome() and strokeInfo.isSome and strokeInfo.get.width > 0.0:
       ctx.save()
       if ci.fill.isNone:
         # NOTE: We only apply shadow to the stroke if we haven't already applied it to.
