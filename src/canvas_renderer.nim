@@ -26,10 +26,10 @@ const px: cstring = "px "
 const space: cstring = " "
 proc renderText(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], textInfo: TextInfo): void =
   if colorInfo.isSome and colorInfo.get.fill.isSome:
-    ctx.fillStyle = $colorInfo.get.fill.get
+    ctx.fillStyle = colorInfo.get.fill.get.toHexCStr
   ctx.textAlign = textInfo.alignment
   ctx.textBaseline = textInfo.textBaseline
-  ctx.font = textInfo.fontWeight.toJs.toString().to(cstring) & space & $textInfo.fontStyle & space & textInfo.fontSize.toJs.toString().to(cstring) & px & textInfo.fontFamily
+  ctx.font = textInfo.fontWeight.toJs.toString().to(cstring) & space & textInfo.fontStyle & space & textInfo.fontSize.toJs.toString().to(cstring) & px & textInfo.fontFamily
   ctx.fillText(textInfo.text, 0.0, 0.0)
 
 proc renderCircle(ctx: CanvasContext2d, radius: float): void =
@@ -103,7 +103,7 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
       let fill = ci.fill.get
       case fill.kind:
         of ColorStyleKind.Solid:
-          ctx.fillStyle = $fill
+          ctx.fillStyle = fill.toHexCStr
         of ColorStyleKind.Gradient:
           let stops = fill.gradient.stops
           let gradient = case fill.gradient.kind:
@@ -121,7 +121,7 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
                 info.endCircle.radius
               )
           for stop in stops:
-            gradient.addColorStop(stop.position, $stop.color)
+            gradient.addColorStop(stop.position, stop.color.toHexCStr)
           ctx.setFillStyle(gradient)
       if path.isSome:
         let p = path.get
@@ -135,7 +135,7 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
         # NOTE: We only apply shadow to the stroke if we haven't already applied it to.
         # This avoids shadows inside stroked shapes.
         ctx.setShadow(shadow)
-      ctx.strokeStyle = $ci.stroke.get()
+      ctx.strokeStyle = ci.stroke.get.toHexCStr
       if path.isSome:
         let p = path.get
         ctx.stroke(p)
