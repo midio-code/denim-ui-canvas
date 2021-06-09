@@ -5,6 +5,7 @@ import options
 import canvas
 import denim_ui
 import strutils
+import jsffi
 
 proc renderSegment(ctx: CanvasContext2d, segment: PathSegment): void =
   case segment.kind
@@ -21,12 +22,14 @@ proc renderSegment(ctx: CanvasContext2d, segment: PathSegment): void =
   of Close:
     ctx.closePath()
 
+const px: cstring = "px "
+const space: cstring = " "
 proc renderText(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], textInfo: TextInfo): void =
   if colorInfo.isSome and colorInfo.get.fill.isSome:
     ctx.fillStyle = $colorInfo.get.fill.get
   ctx.textAlign = textInfo.alignment
   ctx.textBaseline = textInfo.textBaseline
-  ctx.font = $textInfo.fontWeight & " " & $textInfo.fontStyle & " " & $textInfo.fontSize & "px " & textInfo.fontFamily
+  ctx.font = textInfo.fontWeight.toJs.toString().to(cstring) & space & $textInfo.fontStyle & space & textInfo.fontSize.toJs.toString().to(cstring) & px & textInfo.fontFamily
   ctx.fillText(textInfo.text, 0.0, 0.0)
 
 proc renderCircle(ctx: CanvasContext2d, radius: float): void =
@@ -57,6 +60,13 @@ proc setShadow(ctx: CanvasContext2d, shadow: Option[Shadow]): void =
     ctx.shadowOffsetX = s.offset.x
     ctx.shadowOffsetY = s.offset.y
 
+const square = cstring("square")
+const butt = cstring("butt")
+const round = cstring("round")
+
+const miter = cstring("miter")
+const bevel = cstring("bevel")
+
 # TODO: Cleanup this signature, stuff has just been tacked on when neeeded
 proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInfo: Option[StrokeInfo], shadow: Option[Shadow], path: Option[Path2D] = none[Path2D]()): void =
   if strokeInfo.isSome():
@@ -67,20 +77,20 @@ proc fillAndStroke(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], strokeInf
     if si.lineCap.isSome:
       let lineCapValue = case si.lineCap.get:
         of LineCap.Square:
-          "square"
+          square
         of LineCap.Butt:
-          "butt"
+          butt
         of LineCap.Round:
-          "round"
+          round
       ctx.lineCap = lineCapValue
     if si.lineJoin.isSome:
       let lineJoinValue = case si.lineJoin.get:
         of LineJoin.Miter:
-          "miter"
+          miter
         of LineJoin.Bevel:
-          "bevel"
+          bevel
         of LineJoin.Round:
-          "round"
+          round
       ctx.lineJoin = lineJoinValue
   else:
     ctx.lineWidth = 0.0
