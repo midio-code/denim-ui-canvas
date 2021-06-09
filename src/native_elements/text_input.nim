@@ -118,8 +118,9 @@ method onRooted(self: HtmlTextInput): void =
     self.domElement.select()
 
 method onUnrooted(self: HtmlTextInput): void =
-  disposeUpdateHandler()
-  disposeUpdateHandler = nil
+  if not isNil(disposeUpdateHandler):
+    disposeUpdateHandler()
+    disposeUpdateHandler = nil
   if not isNil(self.isFocusedSubscription):
     self.isFocusedSubscription.dispose()
 
