@@ -7,10 +7,6 @@ import native_elements/text_input
 import native_elements/native_text
 import denim_ui
 
-proc renderPrimitives(canvasContext: CanvasContext2d, primitive: Primitive, size: Vec2[float]): void =
-  canvasContext.clearRect(0.0, 0.0, size.x, size.y)
-  canvasContext.render(primitive)
-
 proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeContainerId: string): void =
   let nativeContainer = getElementById(nativeContainerId)
   let canvasElem = getElementById(canvasElementId)

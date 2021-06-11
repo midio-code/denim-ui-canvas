@@ -113,3 +113,16 @@ proc createRadialGradient*(c: CanvasContext2d, x0, y0, r0, x1, y1, r1: float): G
 proc addColorStop*(self: Gradient, pos: float, color: cstring): void {.importjs: "#.addColorStop(@)"}
 
 proc setFillStyle*(self: CanvasContext2d, grad: Gradient): void {.importjs: "#.fillStyle = #".}
+
+type
+  OffscreenCanvas* {.importc, nodecl.} = ref object
+  ImageBitmap* {.importc, nodecl.} = ref object
+
+proc drawImage*(self: CanvasContext2d, image: ImageBitmap, x, y: float): void {.importjs: "#.drawImage(@)".}
+proc drawImage*(self: CanvasContext2d, image: OffscreenCanvas, x, y: float): void {.importjs: "#.drawImage(@)".}
+
+proc newOffscreenCanvas*(w,h: int): OffscreenCanvas {.importjs: "new OffscreenCanvas(@)".}
+proc getContext2d*(self: OffscreenCanvas): CanvasContext2d {.importjs: "#.getContext('2d')".}
+proc getContextBitmapRenderer*(self: OffscreenCanvas): CanvasContext2d {.importjs: "#.getContext('bitmaprenderer')".}
+
+proc transferToImageBitmap*(self: OffscreenCanvas): ImageBitmap {.importjs: "#.transferToImageBitmap()".}

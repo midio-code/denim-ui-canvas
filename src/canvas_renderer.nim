@@ -6,6 +6,12 @@ import canvas
 import denim_ui
 import strutils
 import jsffi
+import tables
+import sets
+
+var renderCache = initTable[Primitive, OffscreenCanvas]()
+var primitivesSeenLastFrame = initHashSet[Primitive]()
+var primitivesSeenThisFrame = initHashSet[Primitive]()
 
 proc renderSegment(ctx: CanvasContext2d, segment: PathSegment): void =
   case segment.kind
@@ -181,7 +187,7 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
     ctx.rect(info.bounds.pos.x, info.bounds.pos.y, info.bounds.size.x, info.bounds.size.y)
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
 
-proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
+proc render*(ctx: CanvasContext2d, primitive: Primitive, caching: bool = false): void =
   ctx.save()
   if primitive.opacity.isSome:
     ctx.globalAlpha = primitive.opacity.get
@@ -203,7 +209,35 @@ proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
     let cb = primitive.bounds
     ctx.rect(0.0, 0.0, cb.size.x, cb.size.y)
     ctx.clip()
-  ctx.renderPrimitive(primitive)
-  for p in primitive.children:
-    ctx.render(p)
+  if primitive in renderCache:
+    let oc = renderCache[primitive]
+    ctx.drawImage(oc, 0.0, 0.0)
+  else:
+    if primitive in primitivesSeenLastFrame and not caching and primitive.bounds.size.x > 0.0 and primitive.bounds.size.y > 0.0:
+      let offscreenCanvas = newOffscreenCanvas(primitive.bounds.size.x.int, primitive.bounds.size.y.int)
+      let offscreenContext = offscreenCanvas.getContext2d()
+      renderPrimitive(offscreenContext, primitive)
+      for p in primitive.children:
+        offscreenContext.render(p, true)
+      renderCache[primitive] = offscreenCanvas
+      ctx.drawImage(offscreenCanvas, 0.0, 0.0)
+    else:
+      ctx.renderPrimitive(primitive)
+      for p in primitive.children:
+        ctx.render(p, caching)
   ctx.restore()
+  primitivesSeenThisFrame.incl(primitive)
+
+proc renderPrimitives*(canvasContext: CanvasContext2d, primitive: Primitive, size: Vec2[float]): void =
+  canvasContext.clearRect(0.0, 0.0, size.x, size.y)
+
+  for k in primitivesSeenLastFrame.difference(primitivesSeenThisFrame):
+    renderCache.del(k)
+
+  echo "Items in render cache: ", renderCache.len
+
+  primitivesSeenLastFrame = primitivesSeenThisFrame
+  primitivesSeenThisFrame.clear()
+
+  canvasContext.render(primitive)
+
