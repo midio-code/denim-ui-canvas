@@ -11,6 +11,8 @@ proc renderPrimitives(canvasContext: CanvasContext2d, primitive: Primitive, size
   canvasContext.clearRect(0.0, 0.0, size.x, size.y)
   canvasContext.render(primitive)
 
+let transparent = "#000000".parseColor.withAlpha(0x00).toHexCStr
+
 proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeContainerId: string): void =
   let nativeContainer = getElementById(nativeContainerId)
   let canvasElem = getElementById(canvasElementId)
@@ -50,6 +52,8 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     let worldPos = elem.actualWorldPosition.get(zero())
     canvasContext.translate(worldPos.x, worldPos.y)
     canvasContext.lineWidth = 14.0
+    canvasContext.fillStyle = transparent
+    canvasContext.strokeStyle = transparent
     if props.stringData.isSome:
       canvasContext.renderPath(props.stringData.get)
     elif props.data.isSome:
