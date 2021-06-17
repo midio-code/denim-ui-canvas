@@ -3,6 +3,7 @@ author        = "Kristian Fjeld Hasselknippe"
 description   = "HTML Canvas backend for the denim ui engine"
 license       = "MIT"
 srcDir        = "src"
+backend       = "js"
 
 # Dependencies
 
