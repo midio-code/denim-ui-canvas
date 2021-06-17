@@ -7,6 +7,8 @@ import native_elements/text_input
 import native_elements/native_text
 import denim_ui
 
+proc performanceNow(): float {.importjs: "performance.now()".}
+
 proc renderPrimitives(canvasContext: CanvasContext2d, primitive: Primitive, size: Vec2[float]): void =
   canvasContext.clearRect(0.0, 0.0, size.x, size.y)
   canvasContext.render(primitive)
@@ -218,17 +220,31 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     event.preventDefault()
     event.stopPropagation()
 
-  var lastTime = 0.0
-  proc frame(time: float): void =
-    let dt = time - lastTime
-    lastTime = time
+  when defined(use_set_interval):
+    var lastTime = performanceNow()
+    proc frame(): void =
+      let time = performanceNow()
+      let dt = time - lastTime
+      lastTime = time
 
-    context.update(dt)
-    if renderRequested:
-      render()
-      renderRequested = false
+      context.update(dt)
+      if renderRequested:
+        render()
+        renderRequested = false
+
+    discard dom.window.setInterval(frame, 16)
+  else:
+    var lastTime = 0.0
+    proc frame(time: float): void =
+      let dt = time - lastTime
+      lastTime = time
+
+      context.update(dt)
+      if renderRequested:
+        render()
+        renderRequested = false
 
 
-    discard dom.window.requestAnimationFrame(frame)
+      discard dom.window.requestAnimationFrame(frame)
 
-  frame(lastTime)
+    frame(lastTime)
