@@ -2,6 +2,7 @@ import options, strformat, sugar, dom
 import denim_ui
 import denim_ui/gui/primitives/defaults
 import denim_ui/gui/primitives/text
+import jsffi
 
 proc contains(self: dom.Element, elem: dom.Element): bool {.importjs: "#.contains(@)".}
 
@@ -135,7 +136,13 @@ proc createHtmlTextInput*(props: (ElementProps, TextInputProps), children: seq[d
     "input",
     proc(ev: dom.Event): void =
       if textInputProps.onChange.isSome():
-        textInputProps.onChange.get()($ev.target.value)
+        textInputProps.onChange.get()(
+          $ev.target.value,
+          TextChangedInfo(
+            selectionStart: ev.toJs.srcElement.selectionStart.to(int),
+            selectionEnd: ev.toJs.srcElement.selectionEnd.to(int)
+          )
+        )
   )
   let textInputElem = HtmlTextInput(
     textInputProps: textInputProps,
