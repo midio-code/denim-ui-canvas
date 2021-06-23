@@ -1,4 +1,4 @@
-import options, strformat, sugar, dom
+import options, strformat, sugar, dom, tables
 import denim_ui
 import denim_ui/gui/primitives/defaults
 import denim_ui/gui/primitives/text
@@ -97,11 +97,10 @@ method updateNativeElement(self: HtmlTextInput): void =
 # TODO: Now we update all the native properties every frame while the native
 # element is rooted. This is fine for now since we mostly just have one or two active at the same time,
 # but will have to be fixed eventually.
-var disposeUpdateHandler: () -> void
+var disposeUpdateHandlers = initTable[HtmlTextInput, () -> void]()
 
 method onRooted(self: HtmlTextInput): void =
-  # TODO: Dispose of subscription
-  disposeUpdateHandler = addBeforeRenderListener(
+  disposeUpdateHandlers[self] = addBeforeRenderListener(
     proc() =
       updateNativeElement(self)
   )
@@ -119,9 +118,9 @@ method onRooted(self: HtmlTextInput): void =
     self.domElement.select()
 
 method onUnrooted(self: HtmlTextInput): void =
-  if not isNil(disposeUpdateHandler):
-    disposeUpdateHandler()
-    disposeUpdateHandler = nil
+  if self in disposeUpdateHandlers:
+    disposeUpdateHandlers[self]()
+    disposeUpdateHandlers.del(self)
   if not isNil(self.isFocusedSubscription):
     self.isFocusedSubscription.dispose()
 
