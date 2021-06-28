@@ -24,6 +24,7 @@ type
 
   TextMetrics {.importc.} = object
     width*: float
+    actualBoundingBoxDescent*: float
 
   Gradient {.importc, nodecl.} = ref object
 

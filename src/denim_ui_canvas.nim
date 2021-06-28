@@ -44,7 +44,7 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     canvasContext.textBaseline = baseline
     canvasContext.font = &"{$fontWeight} {$fontSize}px {fontFamily}"
     let measured = canvas_measureText(canvasContext, text)
-    result = vec2(measured.width, fontSize)
+    result = vec2(measured.width, measured.actualBoundingBoxDescent)
 
   proc hitTestPath(elem: denim_ui.Element, props: PathProps, point: Point): bool =
     if elem.bounds.isNone:
