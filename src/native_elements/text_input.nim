@@ -73,16 +73,10 @@ method updateNativeElement(self: HtmlTextInput): void =
   if not self.textInputProps.wordWrap:
     self.domElement.style.overflow = "visible"
     self.domElement.style.lineHeight = "normal"
-    # TODO: Fix hack of adding 6 to text input height to avoid clipping
-    self.domElement.style.height = &"{bounds.height + 6.0}px"
-  else:
-    self.domElement.style.height = &"{bounds.height}px"
+  self.domElement.style.height = &"{bounds.height}px"
   self.domElement.style.textOverflow = "visible"
   self.domElement.style.width = &"{bounds.width}px"
-  if self.textInputProps.wordWrap:
-    self.domElement.style.transform = &"translate({pos.x}px,{pos.y}px)"
-  else:
-    self.domElement.style.transform = &"translate({pos.x}px,{pos.y - 5.0}px)"
+  self.domElement.style.transform = &"translate({pos.x}px,{pos.y}px)"
   self.domElement.style.padding = &"0 0 0 0"
   self.domElement.style.margin = &"0 0 0 0"
   self.domElement.style.fontSize = &"{fontSize}px"
