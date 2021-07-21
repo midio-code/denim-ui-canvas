@@ -7,12 +7,19 @@ import webgl_renderer
 import native_elements/text_input
 import native_elements/native_text
 import denim_ui
+import webgl
+import jsffi
 
 proc performanceNow(): float {.importjs: "performance.now()".}
+var console {.importc, nodecl.}: JsObject
 
 proc renderPrimitives(canvasContext: CanvasContext2d, primitive: Primitive, size: Vec2[float]): void =
   canvasContext.clearRect(0.0, 0.0, size.x, size.y)
   canvasContext.render(primitive)
+
+proc renderPrimitives(ctx: WebGLRenderingContext, primitive: Primitive, size: Vec2[float]): void =
+  ctx.clearRect(0.0, 0.0, size.x, size.y)
+  ctx.render(primitive)
 
 let transparent = "#000000".parseColor.withAlpha(0x00).toHexCStr
 
@@ -20,9 +27,13 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
   let nativeContainer = getElementById(nativeContainerId)
   let canvasElem = getElementById(canvasElementId)
 
-  let canvas = canvasElem.Canvas
+  let canvas = canvas.Canvas(canvasElem)
 
-  let canvasContext = canvas.getContext2d()
+  when defined(canvas_renderer):
+    let canvasContext = canvas.getContext2d()
+  else:
+    let canvasContext = canvas.toJs.getContext("webgl").to(WebGLRenderingContext)
+
   let scale = 1.0
 
   var size = vec2(float(window.innerWidth),float(window.innerHeight))
@@ -44,8 +55,12 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
   proc measureText(text: string, fontSize: float, fontFamily: string, fontWeight: int, baseline: string): Vec2[float] =
     canvasContext.textBaseline = baseline
     canvasContext.font = &"{$fontWeight} {$fontSize}px {fontFamily}"
-    let measured = canvas_measureText(canvasContext, text)
-    result = vec2(measured.width, measured.actualBoundingBoxDescent)
+    when defined(canvas_renderer):
+      let measured = canvas_measureText(canvasContext, text)
+      result = vec2(measured.width, measured.actualBoundingBoxDescent)
+    else:
+      # TODO: Fix measure text for webgl
+      result = vec2(100.0, 20.0)
 
   proc hitTestPath(elem: denim_ui.Element, props: PathProps, point: Point): bool =
     if elem.bounds.isNone:
@@ -103,9 +118,10 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
   )
 
   proc render(): void =
-    let primitive = denim_ui.render(context)
-    if primitive.isSome():
-      canvasContext.renderPrimitives(primitive.get(), size)
+    canvasContext.clear()
+    # let primitive = denim_ui.render(context)
+    # if primitive.isSome():
+    #   canvasContext.renderPrimitives(primitive.get(), size)
 
   canvasElem.addEventListener "pointerdown", proc(event: Event) =
     let ev = cast[MouseEvent](event)

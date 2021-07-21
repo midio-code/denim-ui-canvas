@@ -47,6 +47,50 @@ proc initShaders(gl: WebGLRenderingContext): void =
   vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
   gl.enableVertexAttribArray(vertexPositionAttribute);
 
+proc `textBaseline=`*(gl: WebGLRenderingContext, baseline: cstring): void =
+    discard
+
+proc `font=`*(gl: WebGLRenderingContext, font: cstring): void =
+    discard
+
+proc scale*(gl: WebGLRenderingContext, x,y: float): void =
+  discard
+
+proc clearRect*(gl: WebGLRenderingContext, l,r,w,h: float): void =
+  discard
+
+proc render*(gl: WebGLRenderingContext, primitives: Primitive): void =
+  discard
+
+proc save*(gl: WebGLRenderingContext): void =
+  discard
+
+proc restore*(gl: WebGLRenderingContext): void =
+  discard
+
+proc resetTransform*(gl: WebGLRenderingContext): void =
+  discard
+
+proc translate*(gl: WebGLRenderingContext, x, y: float): void =
+  discard
+
+proc `lineWidth=`*(gl: WebGLRenderingContext, width: float): void =
+    discard
+
+proc `fillStyle=`*(gl: WebGLRenderingContext, style: cstring): void =
+    discard
+
+proc `strokeStyle=`*(gl: WebGLRenderingContext, style: cstring): void =
+    discard
+
+proc renderPath*(gl: WebGLRenderingContext, data: cstring): void =
+  discard
+
+proc renderPath*(gl: WebGLRenderingContext, data: seq[PathSegment]): void =
+  discard
+
+proc isPointInStroke*(gl: WebGLRenderingContext, x, y: float): bool =
+  false
 
 proc initWebGL*(gl: WebGLRenderingContext): void =
   gl.clear()
