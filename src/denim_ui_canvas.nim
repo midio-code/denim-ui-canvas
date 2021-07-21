@@ -3,6 +3,7 @@ import strformat
 import sugar
 import canvas
 import canvas_renderer
+import webgl_renderer
 import native_elements/text_input
 import native_elements/native_text
 import denim_ui
