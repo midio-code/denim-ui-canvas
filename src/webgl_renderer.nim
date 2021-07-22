@@ -45,7 +45,7 @@ proc initShaders(gl: WebGLRenderingContext): WebGLProgram =
       void main() {
         vec2 normalized = aVertexPosition.xy / canvasSize;
         vec2 corrected = normalized * 2.0 - 1.0;
-        gl_Position = vec4(corrected.x, corrected.y, 0.0, 1.0);
+        gl_Position = vec4(corrected.x, -corrected.y, 0.0, 1.0);
         pos = gl_Position.xy;
       }
     """
@@ -53,10 +53,12 @@ proc initShaders(gl: WebGLRenderingContext): WebGLProgram =
     """
       precision highp float;
 
+      uniform vec4 fill;
+
       varying vec2 pos;
 
       void main() {
-        gl_FragColor = vec4((pos.x + 1.0) / 2.0, (pos.y + 1.0) / 2.0, 0.0, 1.0);
+        gl_FragColor = fill / 255.0;
       }
     """
 
@@ -91,7 +93,7 @@ proc scale*(gl: WebGLRenderingContext, x,y: float): void =
 proc clearRect*(gl: WebGLRenderingContext, l,r,w,h: float): void =
   discard
 
-proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive): void =
+proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive, offset: Size): void =
   case primitive.kind:
     of PrimitiveKind.Container:
       discard
@@ -115,12 +117,19 @@ proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive): void =
       let
         ri = primitive.rectangleInfo
         b = primitive.bounds
-      # let vertices = [
-      #   b.pos.x, b.pos.y + b.size.y,
-      #   b.pos.x + b.size.x, b.pos.y + b.size.y,
-      #   b.pos.x, b.pos.y,
-      #   b.pos.x + b.size.x, b.pos.y,
-      # ]
+      let vertices = [
+        offset.x + b.pos.x,
+        offset.y + b.pos.y + b.size.y,
+
+        offset.x + b.pos.x + b.size.x,
+        offset.y + b.pos.y + b.size.y,
+
+        offset.x + b.pos.x,
+        offset.y + b.pos.y,
+
+        offset.x + b.pos.x + b.size.x,
+        offset.y + b.pos.y,
+      ]
       # let vertices = [
       #     0.0, 40.0,
       #     379.0, 40.0,
@@ -128,12 +137,12 @@ proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive): void =
       #     379.0, 0.0
       #   ]
 
-      let vertices = [
-          0.0, 50.0,
-          50.0, 50.0,
-          0.0, 0.0,
-          50.0, 0.0
-        ]
+      # let vertices = [
+      #     0.0, 50.0,
+      #     50.0, 50.0,
+      #     0.0, 0.0,
+      #     50.0, 0.0
+      #   ]
 
       echo "Vertices: ", vertices
       # NOTE: Render with triangle fan
@@ -172,19 +181,30 @@ proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive): void =
       gl.viewport(0, 0, size.x.int, size.y.int)
       gl.uniform2f(sizeUniformLocation, size.x, size.y)
 
+      let ci = primitive.colorInfo.get
+      if ci.fill.isSome:
+        let fill = ci.fill.get
+        case fill.kind:
+          of ColorStyleKind.Solid:
+            let fillUniformLocation = gl.getUniformLocation(program, "fill")
+            let fillColor = fill.color
+            gl.uniform4f(fillUniformLocation, fillColor.r.float, fillColor.g.float, fillColor.b.float, fillColor.a.float)
+          else:
+            discard
+
       const vertexCount = 4
       #gl.drawArrays(pmTriangleFan, offset, vertexCount)
       gl.drawArrays(pmTriangleStrip, offset, vertexCount)
 
 
   for p in primitive.children:
-    gl.renderImpl(p)
+    gl.renderImpl(p, offset + p.bounds.pos)
 
 proc render*(gl: WebGLRenderingContext, primitive: Primitive): void =
   gl.enable(DEPTH_TEST)
   gl.depthFunc(LEQUAL)
   gl.clear(COLOR_BUFFER_BIT or DEPTH_BUFFER_BIT)
-  gl.renderImpl(primitive)
+  gl.renderImpl(primitive, zero())
 
 proc save*(gl: WebGLRenderingContext): void =
   discard

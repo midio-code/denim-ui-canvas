@@ -122,7 +122,6 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
   )
 
   proc render(): void =
-    canvasContext.clear()
     let primitive = denim_ui.render(context)
     if primitive.isSome():
       canvasContext.renderPrimitives(primitive.get(), size)
