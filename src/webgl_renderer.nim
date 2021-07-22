@@ -8,6 +8,12 @@ type
   ShaderKind = enum
     Vertex, Fragment
 
+var globalScale = vec2(1.0)
+var viewportSize = vec2(500.0, 500.0)
+
+proc setSize*(self: WebGLRenderingContext, size: Size): void =
+  viewportSize = size
+
 var vertexPositionAttribute : uint
 
 proc checkCompileStatus(gl: WebGLRenderingContext, shader: WebGLShader): void =
@@ -88,7 +94,7 @@ proc `font=`*(gl: WebGLRenderingContext, font: cstring): void =
     discard
 
 proc scale*(gl: WebGLRenderingContext, x,y: float): void =
-  discard
+  globalScale = vec2(x,y)
 
 proc clearRect*(gl: WebGLRenderingContext, l,r,w,h: float): void =
   discard
@@ -177,9 +183,8 @@ proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive, offset: Size): 
       let sizeUniformLocation = gl.getUniformLocation(program, "canvasSize")
 
 
-      let size = vec2(500.0, 500.0)
-      gl.viewport(0, 0, size.x.int, size.y.int)
-      gl.uniform2f(sizeUniformLocation, size.x, size.y)
+      gl.viewport(0, 0, viewportSize.x.int, viewportSize.y.int)
+      gl.uniform2f(sizeUniformLocation, viewportSize.x, viewportSize.y)
 
       let ci = primitive.colorInfo.get
       if ci.fill.isSome:
