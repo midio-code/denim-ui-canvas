@@ -40,14 +40,23 @@ proc initShaders(gl: WebGLRenderingContext): WebGLProgram =
 
       uniform vec2 canvasSize;
 
+      varying vec2 pos;
+
       void main() {
-        gl_Position = vec4(((aVertexPosition.xy) / canvasSize) * 2.0 - 1.0, 1.0, 1.0);
+        vec2 normalized = aVertexPosition.xy / canvasSize;
+        vec2 corrected = normalized * 2.0 - 1.0;
+        gl_Position = vec4(corrected.x, corrected.y, 0.0, 1.0);
+        pos = gl_Position.xy;
       }
     """
   const fragmentShaderSource =
     """
+      precision highp float;
+
+      varying vec2 pos;
+
       void main() {
-        gl_FragColor = vec4(0.2, 1.0, 1.0, 1.0);
+        gl_FragColor = vec4((pos.x + 1.0) / 2.0, (pos.y + 1.0) / 2.0, 0.0, 1.0);
       }
     """
 
@@ -106,12 +115,25 @@ proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive): void =
       let
         ri = primitive.rectangleInfo
         b = primitive.bounds
+      # let vertices = [
+      #   b.pos.x, b.pos.y + b.size.y,
+      #   b.pos.x + b.size.x, b.pos.y + b.size.y,
+      #   b.pos.x, b.pos.y,
+      #   b.pos.x + b.size.x, b.pos.y,
+      # ]
+      # let vertices = [
+      #     0.0, 40.0,
+      #     379.0, 40.0,
+      #     0.0, 0.0,
+      #     379.0, 0.0
+      #   ]
+
       let vertices = [
-        b.pos.x, b.pos.y + b.size.y,
-        b.pos.x + b.size.x, b.pos.y + b.size.y,
-        b.pos.x, b.pos.y,
-        b.pos.x + b.size.x, b.pos.y,
-      ]
+          0.0, 50.0,
+          50.0, 50.0,
+          0.0, 0.0,
+          50.0, 0.0
+        ]
 
       echo "Vertices: ", vertices
       # NOTE: Render with triangle fan
