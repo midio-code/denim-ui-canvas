@@ -40,6 +40,8 @@ proc clear*(gl: WebGLRenderingContext) =
   gl.clear(bbCOLOR.uint or bbDEPTH.uint)
 
 proc initShaders(gl: WebGLRenderingContext): WebGLProgram =
+  if not isNil(shaderProgram):
+    return shaderProgram
   const vertexShaderSource =
     """
       attribute vec4 aVertexPosition;
@@ -119,7 +121,6 @@ proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive, offset: Size): 
     of PrimitiveKind.Image:
       discard
     of PrimitiveKind.Rectangle:
-      echo "Rendering rect"
       let
         ri = primitive.rectangleInfo
         b = primitive.bounds
@@ -137,7 +138,6 @@ proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive, offset: Size): 
         offset.y + b.pos.y,
       ]
 
-      echo "Vertices: ", vertices
       let positionsBuffer = gl.createBuffer()
       gl.bindBuffer(beARRAY_BUFFER, positionsBuffer)
       gl.bufferData(beARRAY_BUFFER, vertices, beSTATIC_DRAW)
