@@ -123,7 +123,7 @@ proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive, offset: Size): 
       let
         ri = primitive.rectangleInfo
         b = primitive.bounds
-      let vertices = [
+      let vertices = @[
         offset.x + b.pos.x,
         offset.y + b.pos.y + b.size.y,
 
@@ -136,25 +136,10 @@ proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive, offset: Size): 
         offset.x + b.pos.x + b.size.x,
         offset.y + b.pos.y,
       ]
-      # let vertices = [
-      #     0.0, 40.0,
-      #     379.0, 40.0,
-      #     0.0, 0.0,
-      #     379.0, 0.0
-      #   ]
-
-      # let vertices = [
-      #     0.0, 50.0,
-      #     50.0, 50.0,
-      #     0.0, 0.0,
-      #     50.0, 0.0
-      #   ]
 
       echo "Vertices: ", vertices
-      # NOTE: Render with triangle fan
       let positionsBuffer = gl.createBuffer()
       gl.bindBuffer(beARRAY_BUFFER, positionsBuffer)
-
       gl.bufferData(beARRAY_BUFFER, vertices, beSTATIC_DRAW)
 
       let
