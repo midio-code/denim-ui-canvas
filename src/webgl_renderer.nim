@@ -3,6 +3,7 @@ import webgl/consts
 import dom
 import denim_ui
 import random
+import math
 
 type
   ShaderKind = enum
@@ -108,7 +109,7 @@ type
   BuffersObj = object
     vertices: seq[float]
     indices: seq[uint16]
-    numElements: int
+    vertexSize: int
   Buffers = ref BuffersObj
 
 proc draw(gl: WebGLRenderingContext, buffers: Buffers): void =
@@ -160,7 +161,7 @@ proc draw(gl: WebGLRenderingContext, buffers: Buffers): void =
     gl.uniform2f(sizeUniformLocation, viewportSize.x, viewportSize.y)
 
 
-    gl.drawElements(pmTriangles, buffers.numElements, dtUNSIGNED_SHORT, 0)
+    gl.drawElements(pmTriangles, indices.numElements.uint16, dtUNSIGNED_SHORT, 0)
 
 proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive, offset: Size, buffers: var Buffers): void =
   case primitive.kind:
@@ -218,7 +219,7 @@ proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive, offset: Size, b
 
         color[0], color[1], color[2], color[3],
       ]
-      let indexOffset = buffers.indices.len.uint16
+      let indexOffset = (buffers.vertices.len / buffers.vertexSize).floor.uint16
       buffers.indices &= @[
         indexOffset + 0'u16,
         indexOffset + 1'u16,
@@ -227,7 +228,6 @@ proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive, offset: Size, b
         indexOffset + 1'u16,
         indexOffset + 3'u16
       ]
-      buffers.numElements += 6
 
   for p in primitive.children:
     gl.renderImpl(p, offset + p.bounds.pos, buffers)
@@ -240,6 +240,7 @@ proc render*(gl: WebGLRenderingContext, primitive: Primitive): void =
   var buffers = Buffers(
     vertices: newSeq[float](),
     indices: newSeq[uint16](),
+    vertexSize: 6,
   )
   gl.renderImpl(primitive, zero(), buffers)
   gl.draw(buffers)
