@@ -114,7 +114,8 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     let primitive = denim_ui.render(context)
     if primitive.isSome():
       canvasContext.renderPrimitives(primitive.get(), size)
-    canvasContext.renderPerformancePanel()
+    when defined(visualize_performance):
+      canvasContext.renderPerformancePanel()
 
   canvasElem.addEventListener "pointerdown", proc(event: Event) =
     let ev = cast[MouseEvent](event)
