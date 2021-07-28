@@ -28,15 +28,55 @@ proc renderSegment(ctx: CanvasContext2d, segment: PathSegment): void =
   of PathSegmentKind.Close:
     ctx.closePath()
 
+var textCache = createCanvas()
+textCache.width = 1024
+textCache.height = 1024
+
+var textCachePositions = initTable[TextInfo, Bounds]()
+var currentCachePos = zero()
+var currentCacheLineHeight = 0.0
+
 const px: cstring = "px "
 const space: cstring = " "
-proc renderText(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], textInfo: TextInfo): void =
-  if colorInfo.isSome and colorInfo.get.fill.isSome:
-    ctx.fillStyle = colorInfo.get.fill.get.toHexCStr
+proc measureText(ctx: CanvasContext2d, textInfo: TextInfo): Size =
   ctx.textAlign = textInfo.alignment
   ctx.textBaseline = textInfo.textBaseline
   ctx.font = textInfo.fontWeight.toJs.toString().to(cstring) & space & textInfo.fontStyle & space & textInfo.fontSize.toJs.toString().to(cstring) & px & textInfo.fontFamily
-  ctx.fillText(textInfo.text, 0.0, 0.0)
+  let measured = ctx.canvas_measureText(textInfo.text)
+  vec2(measured.width, measured.actualBoundingBoxDescent)
+
+proc renderText(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], textInfo: TextInfo): void =
+  if textInfo in textCachePositions:
+    let cacheBounds = textCachePositions[textInfo]
+    ctx.drawImage(
+      textCache,
+      cacheBounds.pos.x,
+      cacheBounds.pos.y,
+      cacheBounds.size.x,
+      cacheBounds.size.y,
+      0.0,
+      0.0,
+      cacheBounds.size.x,
+      cacheBounds.size.y
+    )
+  else:
+    let textSize = ctx.measureText(textInfo)
+    assert(textSize.x < textCache.width)
+    assert(textSize.y < textCache.height)
+    if textSize.x > textCache.width - currentCachePos.x:
+      currentCachePos.x = 0.0
+      currentCachePos.y += currentCacheLineHeight
+      currentCacheLineHeight = 0.0
+    let ctx = textCache.getContext2d()
+    if colorInfo.isSome and colorInfo.get.fill.isSome:
+      ctx.fillStyle = colorInfo.get.fill.get.toHexCStr
+    ctx.textAlign = textInfo.alignment
+    ctx.textBaseline = textInfo.textBaseline
+    ctx.font = textInfo.fontWeight.toJs.toString().to(cstring) & space & textInfo.fontStyle & space & textInfo.fontSize.toJs.toString().to(cstring) & px & textInfo.fontFamily
+    ctx.fillText(textInfo.text, currentCachePos.x, currentCachePos.y)
+    textCachePositions[textInfo] = rect(currentCachePos.copy(), textSize.copy())
+    currentCachePos.x += textSize.x
+    currentCacheLineHeight = currentCacheLineHeight.max(textSize.y)
 
 proc renderCircle(ctx: CanvasContext2d, radius: float): void =
   ctx.beginPath()
