@@ -54,6 +54,7 @@ proc initShaders(gl: WebGLRenderingContext): WebGLProgram =
       attribute vec4 fill;
       attribute vec4 stroke;
       attribute float strokeWidth;
+      attribute vec4 radius;
 
       uniform vec2 canvasSize;
       uniform vec2 scale;
@@ -65,17 +66,19 @@ proc initShaders(gl: WebGLRenderingContext): WebGLProgram =
       varying vec4 f_fill;
       varying vec4 f_stroke;
       varying float f_strokeWidth;
+      varying vec4 f_radius;
 
       void main() {
         vert_pos = aVertexPosition;
         vec2 normalized = (pos + (aVertexPosition * size)) * scale / canvasSize;
         vec2 corrected = normalized * 2.0 - 1.0;
         gl_Position = vec4(corrected.x, -corrected.y, 0.0, 1.0);
-        f_pos = pos / canvasSize;
+        f_pos = size * aVertexPosition;
         f_size = size;
         f_fill = fill;
         f_stroke = stroke;
         f_strokeWidth = strokeWidth;
+        f_radius = radius;
       }
     """
   const fragmentShaderSource =
@@ -89,21 +92,30 @@ proc initShaders(gl: WebGLRenderingContext): WebGLProgram =
       varying vec4 f_fill;
       varying vec4 f_stroke;
       varying float f_strokeWidth;
+      varying vec4 f_radius;
 
-      float roundBox(vec2 p, vec2 size, float radius) {
-        size -= vec2(radius);
-        vec2 d = abs(p) - size;
-          return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - radius;
+      float roundBox(vec2 p, vec2 b, vec4 r)
+      {
+          r.xy = (p.x>0.0)?r.xy : r.zw;
+          r.x  = (p.y>0.0)?r.x  : r.y;
+          vec2 q = abs(p)-b+r.x;
+          return min(max(q.x,q.y),0.0) + length(max(q,0.0)) - r.x;
+      }
+
+      vec4 calcColor() {
+        vec4 actualFillColor = vec4((f_fill / 255.0).xyz, 0.0);
+        vec4 r = vec4(f_radius.x / f_size.x, f_radius.y / f_size.y, f_radius.z / f_size.x, f_radius.w / f_size.y);
+        float dist = roundBox(((f_pos / f_size) * 2.0) - 1.0, vec2(1.0), r);
+        if (dist <= 0.0001) {
+           actualFillColor.a = f_fill.a;
+        } else {
+           actualFillColor.a = 0.0;
+        }
+        return actualFillColor;
       }
 
       void main() {
-        // vec4 actualFillColor = f_fill / 255.0;
-        // float dist = roundBox(f_pos, f_size, 10.0);
-        // if (dist <= 0.0001) {
-        //    actualFillColor.r += 1.0;
-        // }
-        // gl_FragColor = actualFillColor;
-        gl_FragColor = vec4(f_pos.x, f_pos.x, f_pos.y, 1.0);
+        gl_FragColor = calcColor();
       }
     """
 
@@ -188,7 +200,7 @@ proc draw(gl: WebGLRenderingContext, buffers: Buffers): void =
       2,
       FLOAT,
       false,
-      13 * 4,
+      17 * 4,
       0
     )
     let sizeAttribLocation = gl.getAttribLocation(program, "size")
@@ -197,7 +209,7 @@ proc draw(gl: WebGLRenderingContext, buffers: Buffers): void =
       2,
       FLOAT,
       false,
-      13 * 4,
+      17 * 4,
       2 * 4
     )
     let fillAttribLocation = gl.getAttribLocation(program, "fill")
@@ -206,7 +218,7 @@ proc draw(gl: WebGLRenderingContext, buffers: Buffers): void =
       4,
       FLOAT,
       false,
-      13 * 4,
+      17 * 4,
       4 * 4
     )
 
@@ -216,7 +228,7 @@ proc draw(gl: WebGLRenderingContext, buffers: Buffers): void =
       4,
       FLOAT,
       false,
-      13 * 4,
+      17 * 4,
       8 * 4
     )
     let strokeWidthAttribLocation = gl.getAttribLocation(program, "strokeWidth")
@@ -225,8 +237,17 @@ proc draw(gl: WebGLRenderingContext, buffers: Buffers): void =
       1,
       FLOAT,
       false,
-      13 * 4,
+      17 * 4,
       12 * 4
+    )
+    let radiusAttribLocation = gl.getAttribLocation(program, "radius")
+    gl.vertexAttribPointer(
+      radiusAttribLocation,
+      4,
+      FLOAT,
+      false,
+      17 * 4,
+      13 * 4
     )
 
     var ext = gl.getANGLEExtension()
@@ -255,6 +276,11 @@ proc draw(gl: WebGLRenderingContext, buffers: Buffers): void =
       strokeWidthAttribLocation
     )
     ext.vertexAttribDivisorANGLE(strokeWidthAttribLocation, 1);
+
+    gl.enableVertexAttribArray(
+      radiusAttribLocation
+    )
+    ext.vertexAttribDivisorANGLE(radiusAttribLocation, 1);
 
     gl.viewport(0, 0, (viewportSize.x * globalScale.x).int, (viewportSize.y * globalScale.y).int)
 
@@ -316,12 +342,21 @@ proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive, offset: Size, b
         let si = primitive.strokeInfo.get
         strokeWidth = si.width
 
+      var radius = [0.0, 0.0, 0.0, 0.0]
+      if ri.radius.isSome:
+        let r = ri.radius.get
+        radius[0] = r.left
+        radius[1] = r.top
+        radius[2] = r.right
+        radius[3] = r.bottom
+
       buffers.attributes &= @[
         offset.x + b.pos.x, offset.y + b.pos.y,
         b.size.x, b.size.y,
         color[0], color[1], color[2], color[3],
         strokeColor[0], strokeColor[1], strokeColor[2], strokeColor[3],
         strokeWidth,
+        radius[0], radius[1], radius[2], radius[3],
       ]
 
       buffers.numInstances += 1
