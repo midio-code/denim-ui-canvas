@@ -32,6 +32,8 @@ type
 
 proc getContext2d*(c: Canvas, alpha: bool = false): CanvasContext2d {.importjs: "#.getContext('2d', @)"}
 
+proc createCanvas*(): Canvas {.importjs: "document.createElement('canvas')".}
+
 proc beginPath*(c: CanvasContext2d) {.importjs: "#.beginPath()".}
 proc strokeText*(c: CanvasContext2d, txt: cstring, x, y: float) {.importjs: "#.strokeText(@)".}
 proc fillText*(c: CanvasContext2d, txt: cstring, x, y: float) {.importjs: "#.fillText(@)".}
@@ -69,6 +71,10 @@ type Image* {.importc.} = ref object
 
 proc newImage*(): Image {.importjs: "new Image()".}
 proc drawImage*(ctx: CanvasContext2d, img: Image, x, y, w, h: float): void {.importjs: "#.drawImage(@)".}
+
+proc drawImage*(ctx: CanvasContext2d, img: Canvas, dx, dy: float): void {.importjs: "#.drawImage(@)".}
+proc drawImage*(ctx: CanvasContext2d, img: Canvas, dx, dy, dw, dh: float): void {.importjs: "#.drawImage(@)".}
+proc drawImage*(ctx: CanvasContext2d, img: Canvas, sx, sy, sw, sh, dx, dy, dw, dh: float): void {.importjs: "#.drawImage(@)".}
 
 proc transform*(
   c: CanvasContext2d,

@@ -6,12 +6,21 @@ import canvas_renderer
 import native_elements/text_input
 import native_elements/native_text
 import denim_ui
+import performance
 
 proc performanceNow(): float {.importjs: "performance.now()".}
 
+let perf = newPerformance()
+
 proc renderPrimitives(canvasContext: CanvasContext2d, primitive: Primitive, size: Vec2[float]): void =
   canvasContext.clearRect(0.0, 0.0, size.x, size.y)
-  canvasContext.render(primitive)
+
+  perf.beginFrame()
+  canvasContext.render(primitive, perf)
+  perf.endFrame()
+
+proc renderPerformancePanel(ctx: CanvasContext2d): void =
+  perf.drawPerformance(ctx, 0.0, 0.0)
 
 let transparent = "#000000".parseColor.withAlpha(0x00).toHexCStr
 
@@ -105,6 +114,7 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     let primitive = denim_ui.render(context)
     if primitive.isSome():
       canvasContext.renderPrimitives(primitive.get(), size)
+    canvasContext.renderPerformancePanel()
 
   canvasElem.addEventListener "pointerdown", proc(event: Event) =
     let ev = cast[MouseEvent](event)

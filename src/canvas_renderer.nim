@@ -6,6 +6,12 @@ import canvas
 import denim_ui
 import strutils
 import jsffi
+import tables
+import dom
+import performance
+
+var document {.importc, nodecl.}: JsObject
+var console {.importc, nodecl.}: JsObject
 
 proc renderSegment(ctx: CanvasContext2d, segment: PathSegment): void =
   case segment.kind
@@ -19,7 +25,7 @@ proc renderSegment(ctx: CanvasContext2d, segment: PathSegment): void =
   of BezierCurveTo:
     let info = segment.bezierInfo
     ctx.bezierCurveTo(info.controlPoint1.x, info.controlPoint1.y, info.controlPoint2.x, info.controlPoint2.y, info.point.x, info.point.y)
-  of Close:
+  of PathSegmentKind.Close:
     ctx.closePath()
 
 const px: cstring = "px "
@@ -203,7 +209,7 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
       ctx.renderRectWithRadius(info.bounds.pos.x, info.bounds.pos.y, info.bounds.size.x, info.bounds.size.y, info.radius.get)
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
 
-proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
+proc render*(ctx: CanvasContext2d, primitive: Primitive, performance: performance.Performance): void =
   ctx.save()
   if primitive.opacity.isSome:
     ctx.globalAlpha = primitive.opacity.get
@@ -227,5 +233,5 @@ proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
     ctx.clip()
   ctx.renderPrimitive(primitive)
   for p in primitive.children:
-    ctx.render(p)
+    ctx.render(p, performance)
   ctx.restore()
