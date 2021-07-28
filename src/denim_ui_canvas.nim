@@ -49,6 +49,7 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
 
     echo "Canvas size: ", canvas.width, ", ", canvas.height
 
+    echo "Setting scale dpr: ", window.devicePixelRatio, ", scale: ", scale
     canvasContext.scale(window.devicePixelRatio * scale, window.devicePixelRatio * scale)
     when not defined(canvas_renderer):
       canvasContext.setSize(size)

@@ -260,6 +260,7 @@ proc useProgram* (gl:WebglRenderingContext,program:WebGLProgram)
 proc validateProgram* (gl:WebglRenderingContext,program:WebGLProgram)
   ## Validates a WebGLProgram.
 
+
 # Uniforms and attributes
 proc disableVertexAttribArray* (gl:WebglRenderingContext,index:uint)
   ## Disables a vertex attribute array at a given position.
@@ -465,3 +466,16 @@ converter toUI16A*(v:seq[uint16]) :Uint16Array {.importcpp: "new Uint16Array(#)"
 
 converter toI32A*[N:int](v:array[N,int]) :Int32Array {.importcpp: "new Int32Array(#)".} # might be a lie
 converter toI32A*(v:seq[int]) :Int32Array {.importcpp: "new Int32Array(#)".} # might be a lie
+
+## Extensions
+
+type
+  ANGLEExtension* = ref ANGLEExtensionObj
+  ANGLEExtensionObj* {.importc } = object
+
+proc getANGLEExtension*(gl: WebGLRenderingContext): ANGLEExtension {.importjs: "#.getExtension('ANGLE_instanced_arrays')".}
+
+{.push importcpp.}
+proc vertexAttribDivisorANGLE*(gl: ANGLEExtension, index: uint, divisor: uint): void
+proc drawElementsInstancedANGLE*(gl: ANGLEExtension, mode: uint|PrimitiveMode, count: int, typ: uint|DataType, offset: int, primcount: int): void
+{.pop.}

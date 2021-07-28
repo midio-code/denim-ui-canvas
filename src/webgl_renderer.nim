@@ -13,6 +13,7 @@ var globalScale = vec2(1.0)
 var viewportSize = vec2(500.0, 500.0)
 
 proc setSize*(self: WebGLRenderingContext, size: Size): void =
+  echo "Setting size: ", size
   viewportSize = size
 
 var vertexPositionAttribute : uint
@@ -46,35 +47,63 @@ proc initShaders(gl: WebGLRenderingContext): WebGLProgram =
   const vertexShaderSource =
     """
       attribute vec2 aVertexPosition;
+
+      // Per instance attributes
+      attribute vec2 pos;
+      attribute vec2 size;
       attribute vec4 fill;
       attribute vec4 stroke;
       attribute float strokeWidth;
 
       uniform vec2 canvasSize;
+      uniform vec2 scale;
 
-      varying vec4 fillColor;
-      varying vec4 sColor;
-      varying float sWidth;
+      varying vec2 vert_pos;
+
+      varying vec2 f_pos;
+      varying vec2 f_size;
+      varying vec4 f_fill;
+      varying vec4 f_stroke;
+      varying float f_strokeWidth;
 
       void main() {
-        vec2 normalized = aVertexPosition / canvasSize;
+        vert_pos = aVertexPosition;
+        vec2 normalized = (pos + (aVertexPosition * size)) * scale / canvasSize;
         vec2 corrected = normalized * 2.0 - 1.0;
         gl_Position = vec4(corrected.x, -corrected.y, 0.0, 1.0);
-        sColor = stroke;
-        sWidth = strokeWidth;
-        fillColor = fill;
+        f_pos = pos / canvasSize;
+        f_size = size;
+        f_fill = fill;
+        f_stroke = stroke;
+        f_strokeWidth = strokeWidth;
       }
     """
   const fragmentShaderSource =
     """
       precision highp float;
 
-      varying vec4 fillColor;
-      varying vec4 sColor;
-      varying float sWidth;
+      varying vec2 vert_pos;
+
+      varying vec2 f_pos;
+      varying vec2 f_size;
+      varying vec4 f_fill;
+      varying vec4 f_stroke;
+      varying float f_strokeWidth;
+
+      float roundBox(vec2 p, vec2 size, float radius) {
+        size -= vec2(radius);
+        vec2 d = abs(p) - size;
+          return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - radius;
+      }
 
       void main() {
-        gl_FragColor = fillColor / 255.0;
+        // vec4 actualFillColor = f_fill / 255.0;
+        // float dist = roundBox(f_pos, f_size, 10.0);
+        // if (dist <= 0.0001) {
+        //    actualFillColor.r += 1.0;
+        // }
+        // gl_FragColor = actualFillColor;
+        gl_FragColor = vec4(f_pos.x, f_pos.x, f_pos.y, 1.0);
       }
     """
 
@@ -108,43 +137,77 @@ proc clearRect*(gl: WebGLRenderingContext, l,r,w,h: float): void =
 
 type
   BuffersObj = object
-    vertices: seq[float]
-    indices: seq[uint16]
+    attributes: seq[float]
     vertexSize: int
+    numInstances: int
   Buffers = ref BuffersObj
 
 proc draw(gl: WebGLRenderingContext, buffers: Buffers): void =
+    let program = gl.initShaders()
+    gl.useProgram(program)
+
+
     let positionsBuffer = gl.createBuffer()
     gl.bindBuffer(beARRAY_BUFFER, positionsBuffer)
-    gl.bufferData(beARRAY_BUFFER, buffers.vertices, beSTATIC_DRAW)
+    let vertices = [
+      0.0, 0.0,
+      1.0, 0.0,
+      1.0, 1.0,
+      0.0, 1.0,
+    ]
+    gl.bufferData(beARRAY_BUFFER, vertices, beSTATIC_DRAW)
 
     let indexBuffer = gl.createBuffer()
     gl.bindBuffer(beELEMENT_ARRAY_BUFFER, indexBuffer)
-    gl.bufferData(beELEMENT_ARRAY_BUFFER, buffers.indices, beSTATIC_DRAW)
+    let indices = [
+      0'u16, 1'u16, 2'u16,
+      0'u16, 2'u16, 3'u16
+    ]
+    gl.bufferData(beELEMENT_ARRAY_BUFFER, indices, beSTATIC_DRAW)
 
-    let
-      normalize = false
-      stride = buffers.vertexSize * 4
-
-    let program = gl.initShaders()
-    gl.useProgram(program)
     let positionAttribLocation = gl.getAttribLocation(program, "aVertexPosition")
     gl.vertexAttribPointer(
       positionAttribLocation,
       2,
       FLOAT,
-      normalize,
-      stride,
+      false,
+      0,
+      0 # offset
+    )
+    gl.enableVertexAttribArray(
+      positionAttribLocation
+    )
+
+    let attributesBuffer = gl.createBuffer()
+    gl.bindBuffer(beARRAY_BUFFER, attributesBuffer)
+    gl.bufferData(beARRAY_BUFFER, buffers.attributes, beSTATIC_DRAW)
+
+    let posAttribLocation = gl.getAttribLocation(program, "pos")
+    gl.vertexAttribPointer(
+      posAttribLocation,
+      2,
+      FLOAT,
+      false,
+      13 * 4,
       0
+    )
+    let sizeAttribLocation = gl.getAttribLocation(program, "size")
+    gl.vertexAttribPointer(
+      sizeAttribLocation,
+      2,
+      FLOAT,
+      false,
+      13 * 4,
+      2 * 4
     )
     let fillAttribLocation = gl.getAttribLocation(program, "fill")
     gl.vertexAttribPointer(
       fillAttribLocation,
       4,
       FLOAT,
-      normalize,
-      stride,
-      2 * 4
+      false,
+      13 * 4,
+      4 * 4
     )
 
     let strokeAttribLocation = gl.getAttribLocation(program, "stroke")
@@ -152,39 +215,56 @@ proc draw(gl: WebGLRenderingContext, buffers: Buffers): void =
       strokeAttribLocation,
       4,
       FLOAT,
-      normalize,
-      stride,
-      6 * 4
+      false,
+      13 * 4,
+      8 * 4
     )
     let strokeWidthAttribLocation = gl.getAttribLocation(program, "strokeWidth")
     gl.vertexAttribPointer(
       strokeWidthAttribLocation,
       1,
       FLOAT,
-      normalize,
-      stride,
-      10 * 4
+      false,
+      13 * 4,
+      12 * 4
     )
 
+    var ext = gl.getANGLEExtension()
+
     gl.enableVertexAttribArray(
-      positionAttribLocation
+      posAttribLocation
     )
+    ext.vertexAttribDivisorANGLE(posAttribLocation, 1);
+
+    gl.enableVertexAttribArray(
+      sizeAttribLocation
+    )
+    ext.vertexAttribDivisorANGLE(sizeAttribLocation, 1);
+
     gl.enableVertexAttribArray(
       fillAttribLocation
     )
+    ext.vertexAttribDivisorANGLE(fillAttribLocation, 1);
+
     gl.enableVertexAttribArray(
       strokeAttribLocation
     )
+    ext.vertexAttribDivisorANGLE(strokeAttribLocation, 1);
+
     gl.enableVertexAttribArray(
       strokeWidthAttribLocation
     )
+    ext.vertexAttribDivisorANGLE(strokeWidthAttribLocation, 1);
 
-    gl.viewport(0, 0, viewportSize.x.int, viewportSize.y.int)
+    gl.viewport(0, 0, (viewportSize.x * globalScale.x).int, (viewportSize.y * globalScale.y).int)
 
     let sizeUniformLocation = gl.getUniformLocation(program, "canvasSize")
     gl.uniform2f(sizeUniformLocation, viewportSize.x, viewportSize.y)
 
-    gl.drawElements(pmTriangles, buffers.indices.len, dtUNSIGNED_SHORT, 0)
+    let scaleUniformLocation = gl.getUniformLocation(program, "scale")
+    gl.uniform2f(scaleUniformLocation, globalScale.x, globalScale.y)
+
+    ext.drawElementsInstancedANGLE(pmTriangles, 6, dtUNSIGNED_SHORT, 0, buffers.numInstances)
 
 proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive, offset: Size, buffers: var Buffers): void =
   case primitive.kind:
@@ -236,45 +316,15 @@ proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive, offset: Size, b
         let si = primitive.strokeInfo.get
         strokeWidth = si.width
 
-
-      buffers.vertices &= @[
-        offset.x + b.pos.x,
-        offset.y + b.pos.y + b.size.y,
-
-        color[0], color[1], color[2], color[3],
-        strokeColor[0], strokeColor[1], strokeColor[2], strokeColor[3],
-        strokeWidth,
-
-        offset.x + b.pos.x + b.size.x,
-        offset.y + b.pos.y + b.size.y,
-
-        color[0], color[1], color[2], color[3],
-        strokeColor[0], strokeColor[1], strokeColor[2], strokeColor[3],
-        strokeWidth,
-
-        offset.x + b.pos.x,
-        offset.y + b.pos.y,
-
-        color[0], color[1], color[2], color[3],
-        strokeColor[0], strokeColor[1], strokeColor[2], strokeColor[3],
-        strokeWidth,
-
-        offset.x + b.pos.x + b.size.x,
-        offset.y + b.pos.y,
-
+      buffers.attributes &= @[
+        offset.x + b.pos.x, offset.y + b.pos.y,
+        b.size.x, b.size.y,
         color[0], color[1], color[2], color[3],
         strokeColor[0], strokeColor[1], strokeColor[2], strokeColor[3],
         strokeWidth,
       ]
-      let indexOffset = (buffers.vertices.len / buffers.vertexSize).floor.uint16
-      buffers.indices &= @[
-        indexOffset + 0'u16,
-        indexOffset + 1'u16,
-        indexOffset + 2'u16,
-        indexOffset + 2'u16,
-        indexOffset + 1'u16,
-        indexOffset + 3'u16
-      ]
+
+      buffers.numInstances += 1
 
   for p in primitive.children:
     gl.renderImpl(p, offset + p.bounds.pos, buffers)
@@ -285,9 +335,8 @@ proc render*(gl: WebGLRenderingContext, primitive: Primitive): void =
   gl.clear(COLOR_BUFFER_BIT or DEPTH_BUFFER_BIT)
 
   var buffers = Buffers(
-    vertices: newSeq[float](),
-    indices: newSeq[uint16](),
-    vertexSize: 11,
+    attributes: newSeq[float](),
+    numInstances: 0
   )
   gl.renderImpl(primitive, zero(), buffers)
   gl.draw(buffers)
@@ -325,3 +374,5 @@ proc isPointInStroke*(gl: WebGLRenderingContext, x, y: float): bool =
 
 proc initWebGL*(gl: WebGLRenderingContext): void =
   gl.clear()
+  gl.enable(BLEND);
+  gl.blendFunc(bmSRC_ALPHA.uint, bmONE_MINUS_SRC_ALPHA.uint);
