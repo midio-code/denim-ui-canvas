@@ -151,6 +151,25 @@ proc renderPath*(ctx: CanvasContext2d, segments: seq[PathSegment]): void =
 proc renderPath*(ctx: CanvasContext2d, data: string): void =
   ctx.stroke(newPath2D(data))
 
+proc renderRectWithRadius*(ctx: CanvasContext2d, x, y, w, h: float, radius: CornerRadius): void =
+  ctx.beginPath()
+
+  ctx.moveTo(x + radius.topLeft, y)
+
+  ctx.lineTo(x + w - radius.topRight, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius.topRight)
+
+  ctx.lineTo(x + w, y + h - radius.bottomRight)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius.bottomRight, y + h)
+
+  ctx.lineTo(x + radius.bottomLeft, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius.bottomLeft)
+
+  ctx.lineTo(x, y + radius.topLeft)
+  ctx.quadraticCurveTo(x, y, x + radius.topLeft, y)
+
+  ctx.closePath()
+
 proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
   case p.kind
   of PrimitiveKind.Container:
@@ -178,7 +197,10 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
   of PrimitiveKind.Rectangle:
     let info = p.rectangleInfo
     ctx.beginPath()
-    ctx.rect(info.bounds.pos.x, info.bounds.pos.y, info.bounds.size.x, info.bounds.size.y)
+    if info.radius.isNone:
+      ctx.rect(info.bounds.pos.x, info.bounds.pos.y, info.bounds.size.x, info.bounds.size.y)
+    else:
+      ctx.renderRectWithRadius(info.bounds.pos.x, info.bounds.pos.y, info.bounds.size.x, info.bounds.size.y, info.radius.get)
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
 
 proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
