@@ -45,19 +45,23 @@ proc initShaders(gl: WebGLRenderingContext): WebGLProgram =
     return shaderProgram
   const vertexShaderSource =
     """
-      attribute vec4 aVertexPosition;
+      attribute vec2 aVertexPosition;
       attribute vec4 fill;
+      attribute vec4 stroke;
+      attribute float strokeWidth;
 
       uniform vec2 canvasSize;
 
-      varying vec2 pos;
       varying vec4 fillColor;
+      varying vec4 sColor;
+      varying float sWidth;
 
       void main() {
-        vec2 normalized = aVertexPosition.xy / canvasSize;
+        vec2 normalized = aVertexPosition / canvasSize;
         vec2 corrected = normalized * 2.0 - 1.0;
         gl_Position = vec4(corrected.x, -corrected.y, 0.0, 1.0);
-        pos = gl_Position.xy;
+        sColor = stroke;
+        sWidth = strokeWidth;
         fillColor = fill;
       }
     """
@@ -65,9 +69,9 @@ proc initShaders(gl: WebGLRenderingContext): WebGLProgram =
     """
       precision highp float;
 
-
       varying vec4 fillColor;
-      varying vec2 pos;
+      varying vec4 sColor;
+      varying float sWidth;
 
       void main() {
         gl_FragColor = fillColor / 255.0;
@@ -83,12 +87,9 @@ proc initShaders(gl: WebGLRenderingContext): WebGLProgram =
   gl.attachShader(shaderProgram, fragmentShader)
   gl.linkProgram(shaderProgram)
 
-  #gl.checkLinkStatus(shaderProgram)
-
   gl.useProgram(shaderProgram)
 
-  vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition")
-  gl.enableVertexAttribArray(vertexPositionAttribute)
+  #gl.checkLinkStatus(shaderProgram)
 
   shaderProgram
 
@@ -122,16 +123,16 @@ proc draw(gl: WebGLRenderingContext, buffers: Buffers): void =
     gl.bufferData(beELEMENT_ARRAY_BUFFER, buffers.indices, beSTATIC_DRAW)
 
     let
-      `type` = FLOAT
       normalize = false
-      stride = 6 * 4
+      stride = buffers.vertexSize * 4
 
     let program = gl.initShaders()
+    gl.useProgram(program)
     let positionAttribLocation = gl.getAttribLocation(program, "aVertexPosition")
     gl.vertexAttribPointer(
       positionAttribLocation,
       2,
-      `type`,
+      FLOAT,
       normalize,
       stride,
       0
@@ -140,28 +141,50 @@ proc draw(gl: WebGLRenderingContext, buffers: Buffers): void =
     gl.vertexAttribPointer(
       fillAttribLocation,
       4,
-      `type`,
+      FLOAT,
       normalize,
       stride,
       2 * 4
     )
+
+    let strokeAttribLocation = gl.getAttribLocation(program, "stroke")
+    gl.vertexAttribPointer(
+      strokeAttribLocation,
+      4,
+      FLOAT,
+      normalize,
+      stride,
+      6 * 4
+    )
+    let strokeWidthAttribLocation = gl.getAttribLocation(program, "strokeWidth")
+    gl.vertexAttribPointer(
+      strokeWidthAttribLocation,
+      1,
+      FLOAT,
+      normalize,
+      stride,
+      10 * 4
+    )
+
     gl.enableVertexAttribArray(
       positionAttribLocation
     )
     gl.enableVertexAttribArray(
       fillAttribLocation
     )
-
-    gl.useProgram(program)
-
-    let sizeUniformLocation = gl.getUniformLocation(program, "canvasSize")
-
+    gl.enableVertexAttribArray(
+      strokeAttribLocation
+    )
+    gl.enableVertexAttribArray(
+      strokeWidthAttribLocation
+    )
 
     gl.viewport(0, 0, viewportSize.x.int, viewportSize.y.int)
+
+    let sizeUniformLocation = gl.getUniformLocation(program, "canvasSize")
     gl.uniform2f(sizeUniformLocation, viewportSize.x, viewportSize.y)
 
-
-    gl.drawElements(pmTriangles, indices.numElements.uint16, dtUNSIGNED_SHORT, 0)
+    gl.drawElements(pmTriangles, buffers.indices.len, dtUNSIGNED_SHORT, 0)
 
 proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive, offset: Size, buffers: var Buffers): void =
   case primitive.kind:
@@ -198,26 +221,50 @@ proc renderImpl(gl: WebGLRenderingContext, primitive: Primitive, offset: Size, b
             color = [fillColor.r.float, fillColor.g.float, fillColor.b.float, fillColor.a.float]
           else:
             discard
+      var strokeColor = [0.0, 0.0, 0.0, 0.0]
+      if ci.stroke.isSome:
+        let stroke = ci.stroke.get
+        case stroke.kind:
+          of ColorStyleKind.Solid:
+            let sc = stroke.color
+            strokeColor = [sc.r.float, sc.g.float, sc.b.float, sc.a.float]
+          else:
+            discard
+
+      var strokeWidth = 0.0
+      if primitive.strokeInfo.isSome:
+        let si = primitive.strokeInfo.get
+        strokeWidth = si.width
+
+
       buffers.vertices &= @[
         offset.x + b.pos.x,
         offset.y + b.pos.y + b.size.y,
 
         color[0], color[1], color[2], color[3],
+        strokeColor[0], strokeColor[1], strokeColor[2], strokeColor[3],
+        strokeWidth,
 
         offset.x + b.pos.x + b.size.x,
         offset.y + b.pos.y + b.size.y,
 
         color[0], color[1], color[2], color[3],
+        strokeColor[0], strokeColor[1], strokeColor[2], strokeColor[3],
+        strokeWidth,
 
         offset.x + b.pos.x,
         offset.y + b.pos.y,
 
         color[0], color[1], color[2], color[3],
+        strokeColor[0], strokeColor[1], strokeColor[2], strokeColor[3],
+        strokeWidth,
 
         offset.x + b.pos.x + b.size.x,
         offset.y + b.pos.y,
 
         color[0], color[1], color[2], color[3],
+        strokeColor[0], strokeColor[1], strokeColor[2], strokeColor[3],
+        strokeWidth,
       ]
       let indexOffset = (buffers.vertices.len / buffers.vertexSize).floor.uint16
       buffers.indices &= @[
@@ -240,7 +287,7 @@ proc render*(gl: WebGLRenderingContext, primitive: Primitive): void =
   var buffers = Buffers(
     vertices: newSeq[float](),
     indices: newSeq[uint16](),
-    vertexSize: 6,
+    vertexSize: 11,
   )
   gl.renderImpl(primitive, zero(), buffers)
   gl.draw(buffers)
