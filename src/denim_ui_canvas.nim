@@ -10,12 +10,11 @@ import performance
 
 proc performanceNow(): float {.importjs: "performance.now()".}
 
-
 proc renderPrimitives(canvasContext: CanvasContext2d, primitive: Primitive, size: Vec2[float]): void =
   canvasContext.clearRect(0.0, 0.0, size.x, size.y)
 
   perf.tick("render canvas")
-  canvasContext.render(primitive, perf)
+  canvasContext.render(primitive)
   perf.tock("render canvas")
 
 proc renderPerformancePanel(ctx: CanvasContext2d): void =
