@@ -21,18 +21,21 @@ proc lerp(t, a, b: float): float =
 var performance {.importc, nodecl.}: dom.Performance
 
 type
-  Frame = ref FrameObj
-  FrameObj = object
+  EventKind = enum
+    Tick, Tock
+  Event = ref object
+    kind: EventKind
+    time: float
+
+  Frame = ref object
     startTime: float
     endTime: float
-    events: seq[tuple[label: cstring, timeSpent: float]]
+    events: seq[tuple[label: cstring, event: Event]]
 
-  Performance* = ref PerformanceObj
-  PerformanceObj* = object
+  Performance* = ref object
     stopped: bool
     pos: Point
     hoveredFrame: int
-    currentTicks: Table[cstring, float]
     currentFrame: int
     frames: array[numFramesToDisplay,Frame]
 
@@ -41,24 +44,24 @@ proc newPerformance*(pos: Point): Performance =
     stopped: false,
     pos: pos,
     hoveredFrame: -1,
-    currentTicks: initTable[cstring, float](),
     currentFrame: 0
   )
 
 proc tick*(self: Performance, label: cstring): void =
   if self.stopped:
     return
-  self.currentTicks[label] = performance.now()
+
+  self.frames[self.currentFrame].events.add(
+    (label, Event(kind: EventKind.Tick, time: performance.now()))
+  )
 
 proc tock*(self: Performance, label: cstring): void =
   if self.stopped:
     return
 
-  let n = performance.now()
-  let last = self.currentTicks[label]
-  let timeSpentSinceTick = n - last
-  self.frames[self.currentFrame].events.add((label, timeSpentSinceTick))
-
+  self.frames[self.currentFrame].events.add(
+    (label, Event(kind: EventKind.Tock, time: performance.now()))
+  )
 
 var performanceCanvas = createCanvas()
 performanceCanvas.width = width + textPanelWidth
@@ -73,7 +76,7 @@ proc beginFrame*(self: Performance): void =
   console.timeStamp("Frame " & $self.currentFrame)
   self.frames[self.currentFrame] = Frame(
     startTime: performance.now(),
-    events: @[]
+    events: newSeqOfCap[(cstring, Event)](100)
   )
 
 proc endFrame*(self: Performance): void =
@@ -112,8 +115,19 @@ proc drawLastFrame(self: Performance): void =
 
   let numEvents = lastFrame.events.len
   var yPos = 0.0
-  for i, event in lastFrame.events:
-    let barHeight = (event.timeSpent / (16.0 * 2.0)) * height
+
+  var summarizedEvents = initTable[cstring, float]()
+  for event in lastFrame.events:
+    let
+      label = event[0]
+      ev = event[1]
+    if ev.kind == EventKind.Tick:
+      summarizedEvents.mgetorput(label, 0.0) -= ev.time
+    else:
+      summarizedEvents[label] += ev.time
+
+  for label, timeSpent in summarizedEvents:
+    let barHeight = (timeSpent / (16.0 * 2.0)) * height
     performanceCanvasContext.fillStyle = $color
     performanceCanvasContext.strokeStyle = cstring("#555555")
     performanceCanvasContext.lineWidth = 1.0
@@ -132,7 +146,13 @@ proc drawLastFrame(self: Performance): void =
 
       var summarizedEvents = initTable[cstring, float]()
       for event in hoveredFrame.events:
-        summarizedEvents.mgetorput(event[0], 0.0) += event[1]
+        let
+          label = event[0]
+          ev = event[1]
+        if ev.kind == EventKind.Tick:
+          summarizedEvents.mgetorput(label, 0.0) -= ev.time
+        else:
+          summarizedEvents[label] += ev.time
       let numLabels = summarizedEvents.len
 
       const lineHeight = 22.0
