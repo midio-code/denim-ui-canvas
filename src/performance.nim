@@ -115,7 +115,7 @@ proc drawLastFrame(self: Performance): void =
   for i, event in lastFrame.events:
     let barHeight = (event.timeSpent / (16.0 * 2.0)) * height
     performanceCanvasContext.fillStyle = $color
-    performanceCanvasContext.strokeStyle = "#555555"
+    performanceCanvasContext.strokeStyle = cstring("#555555")
     performanceCanvasContext.lineWidth = 1.0
     let x = barWidth * lastFrameIndex.float
     let y = height - barHeight - yPos
@@ -123,7 +123,7 @@ proc drawLastFrame(self: Performance): void =
     performanceCanvasContext.strokeRect(x, y, barWidth, barHeight)
     yPos += barHeight
   # Render 60fps line
-  performanceCanvasContext.fillStyle = "#004400"
+  performanceCanvasContext.fillStyle = cstring("#004400")
   performanceCanvasContext.fillRect(0.0, height / 2.0, width, 1.0)
 
   if self.hoveredFrame > 0 and self.hoveredFrame < numFramesToDisplay:
@@ -137,13 +137,13 @@ proc drawLastFrame(self: Performance): void =
 
       const lineHeight = 22.0
 
-      performanceCanvasContext.fillStyle = "#ffffff"
+      performanceCanvasContext.fillStyle = cstring("#ffffff")
       performanceCanvasContext.fillRect(width, 0.0, textPanelWidth, max(textPanelHeight, lineHeight * numLabels + 10.0))
 
-      performanceCanvasContext.textBaseline = "top"
-      performanceCanvasContext.textAlign = "left"
-      performanceCanvasContext.font = "18.0px serif"
-      performanceCanvasContext.fillStyle = "#000000ff"
+      performanceCanvasContext.textBaseline = cstring("top")
+      performanceCanvasContext.textAlign = cstring("left")
+      performanceCanvasContext.font = cstring("18.0px serif")
+      performanceCanvasContext.fillStyle = cstring("#000000ff")
       var yPos = 5.0
       performanceCanvasContext.fillText(&"Frame: {self.hoveredFrame}", width + 5.0, yPos)
       yPos += lineHeight
