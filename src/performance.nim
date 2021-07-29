@@ -12,6 +12,7 @@ var console {.importc, nodecl.}: JsObject
 const width = 600.0
 const height = 130.0
 const textPanelWidth = 250.0
+const textPanelHeight = height * 2.0
 const numFramesToDisplay = 120
 
 proc lerp(t, a, b: float): float =
@@ -52,13 +53,10 @@ proc tick*(self: Performance, label: cstring): void =
 proc tock*(self: Performance, label: cstring): void =
   if self.stopped:
     return
-  let n = performance.now()
-  if label notin self.currentTicks:
-    raise newException(Exception, &"No matching label for performance 'tock' {label}")
 
+  let n = performance.now()
   let last = self.currentTicks[label]
   let timeSpentSinceTick = n - last
-  self.currentTicks.del(label)
   self.frames[self.currentFrame].events.add((label, timeSpentSinceTick))
 
 
@@ -131,8 +129,16 @@ proc drawLastFrame(self: Performance): void =
   if self.hoveredFrame > 0 and self.hoveredFrame < numFramesToDisplay:
     let hoveredFrame = self.frames[self.hoveredFrame]
     if not isNil(hoveredFrame):
+
+      var summarizedEvents = initTable[cstring, float]()
+      for event in hoveredFrame.events:
+        summarizedEvents.mgetorput(event[0], 0.0) += event[1]
+      let numLabels = summarizedEvents.len
+
+      const lineHeight = 22.0
+
       performanceCanvasContext.fillStyle = "#ffffff"
-      performanceCanvasContext.fillRect(width, 0.0, textPanelWidth, height)
+      performanceCanvasContext.fillRect(width, 0.0, textPanelWidth, max(textPanelHeight, lineHeight * numLabels + 10.0))
 
       performanceCanvasContext.textBaseline = "top"
       performanceCanvasContext.textAlign = "left"
@@ -140,13 +146,13 @@ proc drawLastFrame(self: Performance): void =
       performanceCanvasContext.fillStyle = "#000000ff"
       var yPos = 5.0
       performanceCanvasContext.fillText(&"Frame: {self.hoveredFrame}", width + 5.0, yPos)
-      yPos += 22.0
-      for event in hoveredFrame.events:
-        performanceCanvasContext.fillText(&"{event[0]}: {$event[1]:3.3}", width + 5.0, yPos)
-        yPos += 23.0
+      yPos += lineHeight
+      for label, timeSpent in summarizedEvents:
+        performanceCanvasContext.fillText(&"{label}: {$timeSpent:3.3}", width + 5.0, yPos)
+        yPos += lineHeight
 
       let hoveredFrameTime = hoveredFrame.endTime - hoveredFrame.startTime
-      performanceCanvasContext.fillText(&"Total: {lastFrameTime:3.3}", width + 5.0, yPos)
+      performanceCanvasContext.fillText(&"Total: {hoveredFrameTime:3.3}", width + 5.0, yPos)
 
 
 proc drawPerformance*(self: Performance, ctx: CanvasContext2d): void =
@@ -154,3 +160,5 @@ proc drawPerformance*(self: Performance, ctx: CanvasContext2d): void =
   ctx.fillStyle = "#fefefe"
   ctx.fillRect(self.pos.x, self.pos.y, width, height)
   ctx.drawImage(performanceCanvas, self.pos.x, self.pos.y)
+
+let perf* = newPerformance(zero())

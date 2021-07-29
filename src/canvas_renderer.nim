@@ -192,7 +192,9 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
       of PathInfoKind.String:
         fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow, newPath2D(p.pathInfo.data))
   of PrimitiveKind.Text:
+    perf.tick("text")
     renderText(ctx, p.colorInfo, p.textInfo)
+    perf.tock("text")
   of PrimitiveKind.Circle:
     let info = p.circleInfo
     renderCircle(ctx, info.radius)

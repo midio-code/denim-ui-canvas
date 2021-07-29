@@ -10,7 +10,6 @@ import performance
 
 proc performanceNow(): float {.importjs: "performance.now()".}
 
-let perf = newPerformance(zero())
 
 proc renderPrimitives(canvasContext: CanvasContext2d, primitive: Primitive, size: Vec2[float]): void =
   canvasContext.clearRect(0.0, 0.0, size.x, size.y)
