@@ -7,6 +7,8 @@ import math
 import colors
 import denim_ui
 
+var console {.importc, nodecl.}: JsObject
+
 const width = 600.0
 const height = 130.0
 const textPanelWidth = 250.0
@@ -69,6 +71,8 @@ let performanceCanvasContext = performanceCanvas.getContext2d()
 proc beginFrame*(self: Performance): void =
   if self.stopped:
     return
+
+  console.timeStamp("Frame " & $self.currentFrame)
   self.frames[self.currentFrame] = Frame(
     startTime: performance.now(),
     events: @[]
@@ -135,6 +139,8 @@ proc drawLastFrame(self: Performance): void =
       performanceCanvasContext.font = "18.0px serif"
       performanceCanvasContext.fillStyle = "#000000ff"
       var yPos = 5.0
+      performanceCanvasContext.fillText(&"Frame: {self.hoveredFrame}", width + 5.0, yPos)
+      yPos += 22.0
       for event in hoveredFrame.events:
         performanceCanvasContext.fillText(&"{event[0]}: {$event[1]:3.3}", width + 5.0, yPos)
         yPos += 23.0
