@@ -7,6 +7,11 @@ import math
 import colors
 import denim_ui
 
+const width = 600.0
+const height = 130.0
+const textPanelWidth = 200.0
+const numFramesToDisplay = 120
+
 proc lerp(t, a, b: float): float =
   return a + t * (b - a);
 
@@ -22,13 +27,15 @@ type
   Performance* = ref PerformanceObj
   PerformanceObj* = object
     pos: Point
+    hoveredFrame: int
     currentTicks: Table[cstring, float]
     currentFrame: int
-    frames: array[120,Frame]
+    frames: array[numFramesToDisplay,Frame]
 
 proc newPerformance*(pos: Point): Performance =
   Performance(
     pos: pos,
+    hoveredFrame: -1,
     currentTicks: initTable[cstring, float](),
     currentFrame: 0
   )
@@ -48,9 +55,7 @@ proc tock*(self: Performance, label: cstring): void =
 
 
 var performanceCanvas = createCanvas()
-const width = 600.0
-const height = 130.0
-performanceCanvas.width = width
+performanceCanvas.width = width + textPanelWidth
 performanceCanvas.height = height
 
 let performanceCanvasContext = performanceCanvas.getContext2d()
@@ -63,14 +68,19 @@ proc beginFrame*(self: Performance): void =
 
 proc endFrame*(self: Performance): void =
   self.frames[self.currentFrame].endTime = performance.now()
-  self.currentFrame = floorMod(self.currentFrame + 1, 120)
+  self.currentFrame = floorMod(self.currentFrame + 1, numFramesToDisplay)
 
 proc onMouseMove*(self: Performance, x, y: float): void =
-  discard
+  if x >= self.pos.x and x < self.pos.x + width and y >= self.pos.y and y <= self.pos.y + height:
+    let barWidth = width / numFramesToDisplay
+    let frameIndex = ((x - self.pos.x) / barWidth).floor().int
+    self.hoveredFrame = frameIndex
+  else:
+    self.hoveredFrame = -1
 
 proc drawLastFrame(self: Performance): void =
-  const barWidth = width / 120.0
-  let lastFrameIndex = floorMod(self.currentFrame - 1, 120)
+  const barWidth = width / numFramesToDisplay
+  let lastFrameIndex = floorMod(self.currentFrame - 1, numFramesToDisplay)
   let lastFrame = self.frames[lastFrameIndex]
   let lastFrameTime = lastFrame.endTime - lastFrame.startTime
 
@@ -88,12 +98,32 @@ proc drawLastFrame(self: Performance): void =
     performanceCanvasContext.fillStyle = $color
     performanceCanvasContext.strokeStyle = "#555555"
     performanceCanvasContext.lineWidth = 1.0
-    performanceCanvasContext.fillRect(barWidth * lastFrameIndex.float, height - barHeight - yPos, barWidth, barHeight)
-    performanceCanvasContext.strokeRect(barWidth * lastFrameIndex.float, height - barHeight - yPos, barWidth, barHeight)
+    let x = barWidth * lastFrameIndex.float
+    let y = height - barHeight - yPos
+    performanceCanvasContext.fillRect(x, y, barWidth, barHeight)
+    performanceCanvasContext.strokeRect(x, y, barWidth, barHeight)
     yPos += barHeight
   # Render 60fps line
   performanceCanvasContext.fillStyle = "#004400"
   performanceCanvasContext.fillRect(0.0, height / 2.0, width, 1.0)
+
+  if self.hoveredFrame > 0 and self.hoveredFrame < numFramesToDisplay:
+    let hoveredFrame = self.frames[self.hoveredFrame]
+    if not isNil(hoveredFrame):
+      performanceCanvasContext.fillStyle = "#ffffff"
+      performanceCanvasContext.fillRect(width, 0.0, textPanelWidth, height)
+      performanceCanvasContext.textBaseline = "top"
+      performanceCanvasContext.textAlign = "left"
+      performanceCanvasContext.font = "16.0px"
+      performanceCanvasContext.fillStyle = "#000000ff"
+      var yPos = 5.0
+      for event in hoveredFrame.events:
+        performanceCanvasContext.fillText(&"{event[0]}: {$event[1]}", width + 5.0, yPos)
+        yPos += 20.0
+
+      let hoveredFrameTime = hoveredFrame.endTime - hoveredFrame.startTime
+      performanceCanvasContext.fillText(&"Total: {lastFrameTime}", width + 5.0, yPos)
+
 
 proc drawPerformance*(self: Performance, ctx: CanvasContext2d): void =
   self.drawLastFrame()
