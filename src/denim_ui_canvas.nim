@@ -121,7 +121,14 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
     let ev = cast[MouseEvent](event)
     let canvas = document.getElementById("rootCanvas")
     let bounds = canvas.getBoundingClientRect()
-    context.dispatchPointerDown(ev.clientX - bounds.left, ev.clientY - bounds.top, cast[PointerIndex](ev.button))
+
+    let
+      x = ev.clientX - bounds.left
+      y = ev.clientY - bounds.top
+    context.dispatchPointerDown(x, y, cast[PointerIndex](ev.button))
+
+    when defined(visualize_performance):
+      perf.onMouseClick(x, y)
 
   canvasElem.addEventListener "pointerup", proc(event: Event) =
     let ev = cast[MouseEvent](event)
