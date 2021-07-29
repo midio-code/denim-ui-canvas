@@ -185,28 +185,37 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
   of PrimitiveKind.Container:
     discard
   of PrimitiveKind.Path:
+    perf.tick("path")
     case p.pathInfo.kind:
       of PathInfoKind.Segments:
         ctx.renderPath(p.pathInfo.segments)
         fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
       of PathInfoKind.String:
         fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow, newPath2D(p.pathInfo.data))
+    perf.tock("path")
   of PrimitiveKind.Text:
     perf.tick("text")
     renderText(ctx, p.colorInfo, p.textInfo)
     perf.tock("text")
   of PrimitiveKind.Circle:
+    perf.tick("circle")
     let info = p.circleInfo
     renderCircle(ctx, info.radius)
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
+    perf.tock("circle")
   of PrimitiveKind.Ellipse:
+    perf.tick("ellipse")
     let info = p.ellipseInfo
     renderEllipse(ctx, info)
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
+    perf.tock("ellipse")
   of PrimitiveKind.Image:
+    perf.tick("image")
     let info = p.imageInfo
     ctx.renderImage(p.bounds, info)
+    perf.tock("image")
   of PrimitiveKind.Rectangle:
+    perf.tick("rectangle")
     let info = p.rectangleInfo
     let bounds = p.bounds
     ctx.beginPath()
@@ -215,13 +224,18 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
     else:
       ctx.renderRectWithRadius(bounds, info.radius.get)
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
+    perf.tock("rectangle")
 
 proc render*(ctx: CanvasContext2d, primitive: Primitive, performance: performance.Performance): void =
   ctx.save()
   if primitive.opacity.isSome:
     ctx.globalAlpha = primitive.opacity.get
 
+  perf.tick("translate")
   ctx.translate(primitive.bounds.x, primitive.bounds.y)
+  perf.tock("translate")
+
+  perf.tick("transform")
   for transform in  primitive.transform:
     case transform.kind:
       of Scaling:
@@ -233,6 +247,7 @@ proc render*(ctx: CanvasContext2d, primitive: Primitive, performance: performanc
         ctx.translate(transform.translation.x, transform.translation.y)
       of Rotation:
         ctx.rotate(transform.rotation)
+  perf.tock("transform")
   if primitive.clipToBounds:
     ctx.beginPath()
     let cb = primitive.bounds

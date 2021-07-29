@@ -62,7 +62,7 @@ proc tock*(self: Performance, label: cstring): void =
 
 var performanceCanvas = createCanvas()
 performanceCanvas.width = width + textPanelWidth
-performanceCanvas.height = height
+performanceCanvas.height = height + 500.0
 
 let performanceCanvasContext = performanceCanvas.getContext2d()
 
