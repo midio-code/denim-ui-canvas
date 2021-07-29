@@ -157,7 +157,13 @@ proc renderPath*(ctx: CanvasContext2d, segments: seq[PathSegment]): void =
 proc renderPath*(ctx: CanvasContext2d, data: string): void =
   ctx.stroke(newPath2D(data))
 
-proc renderRectWithRadius*(ctx: CanvasContext2d, x, y, w, h: float, radius: CornerRadius): void =
+proc renderRectWithRadius*(ctx: CanvasContext2d, bounds: Bounds, radius: CornerRadius): void =
+  let
+    x = bounds.pos.x
+    y = bounds.pos.y
+    w = bounds.size.x
+    h = bounds.size.y
+
   ctx.beginPath()
 
   ctx.moveTo(x + radius.topLeft, y)
@@ -206,7 +212,7 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
     if info.radius.isNone:
       ctx.rect(info.bounds.pos.x, info.bounds.pos.y, info.bounds.size.x, info.bounds.size.y)
     else:
-      ctx.renderRectWithRadius(info.bounds.pos.x, info.bounds.pos.y, info.bounds.size.x, info.bounds.size.y, info.radius.get)
+      ctx.renderRectWithRadius(info.bounds, info.radius.get)
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
 
 proc render*(ctx: CanvasContext2d, primitive: Primitive, performance: performance.Performance): void =
