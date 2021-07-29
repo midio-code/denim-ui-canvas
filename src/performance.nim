@@ -6,6 +6,7 @@ import canvas
 import math
 import colors
 import denim_ui
+import jsMap
 
 var console {.importc, nodecl.}: JsObject
 
@@ -51,8 +52,9 @@ proc tick*(self: Performance, label: cstring): void =
   if self.stopped:
     return
 
+  let time = performance.now()
   self.frames[self.currentFrame].events.add(
-    (label, Event(kind: EventKind.Tick, time: performance.now()))
+    (label, Event(kind: EventKind.Tick, time: time))
   )
 
 proc tock*(self: Performance, label: cstring): void =
@@ -116,15 +118,17 @@ proc drawLastFrame(self: Performance): void =
   let numEvents = lastFrame.events.len
   var yPos = 0.0
 
-  var summarizedEvents = initTable[cstring, float]()
+  var summarizedEvents = newJsMap[cstring, float]()
   for event in lastFrame.events:
     let
       label = event[0]
       ev = event[1]
+    if label notin summarizedEvents:
+      summarizedEvents.set(label, 0.0)
     if ev.kind == EventKind.Tick:
-      summarizedEvents.mgetorput(label, 0.0) -= ev.time
+      summarizedEvents.set(label, summarizedEvents.get(label) - ev.time)
     else:
-      summarizedEvents[label] += ev.time
+      summarizedEvents.set(label, summarizedEvents.get(label) + ev.time)
 
   for label, timeSpent in summarizedEvents:
     let barHeight = (timeSpent / (16.0 * 2.0)) * height
@@ -143,16 +147,17 @@ proc drawLastFrame(self: Performance): void =
   if self.hoveredFrame > 0 and self.hoveredFrame < numFramesToDisplay:
     let hoveredFrame = self.frames[self.hoveredFrame]
     if not isNil(hoveredFrame):
-
-      var summarizedEvents = initTable[cstring, float]()
+      var summarizedEvents = newJsMap[cstring, float]()
       for event in hoveredFrame.events:
         let
           label = event[0]
           ev = event[1]
+        if label notin summarizedEvents:
+          summarizedEvents.set(label, 0.0)
         if ev.kind == EventKind.Tick:
-          summarizedEvents.mgetorput(label, 0.0) -= ev.time
+          summarizedEvents.set(label,summarizedEvents.get(label) - ev.time)
         else:
-          summarizedEvents[label] += ev.time
+          summarizedEvents.set(label,summarizedEvents.get(label) + ev.time)
       let numLabels = summarizedEvents.len
 
       const lineHeight = 22.0
