@@ -10,17 +10,17 @@ import performance
 
 proc performanceNow(): float {.importjs: "performance.now()".}
 
-let perf = newPerformance()
+let perf = newPerformance(zero())
 
 proc renderPrimitives(canvasContext: CanvasContext2d, primitive: Primitive, size: Vec2[float]): void =
   canvasContext.clearRect(0.0, 0.0, size.x, size.y)
 
-  perf.beginFrame()
+  perf.tick("render canvas")
   canvasContext.render(primitive, perf)
-  perf.endFrame()
+  perf.tock("render canvas")
 
 proc renderPerformancePanel(ctx: CanvasContext2d): void =
-  perf.drawPerformance(ctx, 0.0, 0.0)
+  perf.drawPerformance(ctx)
 
 let transparent = "#000000".parseColor.withAlpha(0x00).toHexCStr
 
@@ -111,11 +111,11 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
   )
 
   proc render(): void =
+    perf.tick("render denim")
     let primitive = denim_ui.render(context)
+    perf.tock("render denim")
     if primitive.isSome():
       canvasContext.renderPrimitives(primitive.get(), size)
-    when defined(visualize_performance):
-      canvasContext.renderPerformancePanel()
 
   canvasElem.addEventListener "pointerdown", proc(event: Event) =
     let ev = cast[MouseEvent](event)
@@ -172,7 +172,14 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
 
     let canvas = document.getElementById("rootCanvas")
     let bounds = canvas.getBoundingClientRect()
-    context.dispatchPointerMove(ev.clientX - bounds.left, ev.clientY - bounds.top)
+
+    let
+      x = ev.clientX - bounds.left
+      y = ev.clientY - bounds.top
+    context.dispatchPointerMove(x, y)
+
+    when defined(visualize_performance):
+      perf.onMouseMove(x, y)
 
   type
     # NOTE: Polyfills missing event type in the dom module
@@ -238,10 +245,16 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
       let dt = time - lastTime
       lastTime = time
 
+      perf.beginFrame()
+      perf.tick("update")
       context.update(dt)
+      perf.tock("update")
       if renderRequested:
         render()
         renderRequested = false
+      perf.endFrame()
+      when defined(visualize_performance):
+        canvasContext.renderPerformancePanel()
 
     discard dom.window.setInterval(frame, 16)
   else:
@@ -250,10 +263,16 @@ proc startApp*(render: () -> denim_ui.Element, canvasElementId: string, nativeCo
       let dt = time - lastTime
       lastTime = time
 
+      perf.beginFrame()
+      perf.tick("update")
       context.update(dt)
+      perf.tock("update")
       if renderRequested:
         render()
         renderRequested = false
+      perf.endFrame()
+      when defined(visualize_performance):
+        canvasContext.renderPerformancePanel()
 
 
       discard dom.window.requestAnimationFrame(frame)

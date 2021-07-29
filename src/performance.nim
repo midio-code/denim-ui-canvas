@@ -5,6 +5,7 @@ import strformat
 import canvas
 import math
 import colors
+import denim_ui
 
 proc lerp(t, a, b: float): float =
   return a + t * (b - a);
@@ -16,17 +17,18 @@ type
   FrameObj = object
     startTime: float
     endTime: float
+    events: seq[tuple[label: cstring, timeSpent: float]]
 
   Performance* = ref PerformanceObj
   PerformanceObj* = object
-    timeSpent: Table[cstring, float]
+    pos: Point
     currentTicks: Table[cstring, float]
     currentFrame: int
     frames: array[120,Frame]
 
-proc newPerformance*(): Performance =
+proc newPerformance*(pos: Point): Performance =
   Performance(
-    timeSpent: initTable[cstring, float](),
+    pos: pos,
     currentTicks: initTable[cstring, float](),
     currentFrame: 0
   )
@@ -41,8 +43,8 @@ proc tock*(self: Performance, label: cstring): void =
 
   let last = self.currentTicks[label]
   let timeSpentSinceTick = n - last
-  self.timeSpent[label] += timeSpentSinceTick
   self.currentTicks.del(label)
+  self.frames[self.currentFrame].events.add((label, timeSpentSinceTick))
 
 
 var performanceCanvas = createCanvas()
@@ -56,11 +58,15 @@ let performanceCanvasContext = performanceCanvas.getContext2d()
 proc beginFrame*(self: Performance): void =
   self.frames[self.currentFrame] = Frame(
     startTime: performance.now(),
+    events: @[]
   )
 
 proc endFrame*(self: Performance): void =
   self.frames[self.currentFrame].endTime = performance.now()
   self.currentFrame = floorMod(self.currentFrame + 1, 120)
+
+proc onMouseMove*(self: Performance, x, y: float): void =
+  discard
 
 proc drawLastFrame(self: Performance): void =
   const barWidth = width / 120.0
@@ -80,8 +86,8 @@ proc drawLastFrame(self: Performance): void =
   performanceCanvasContext.fillStyle = "#004400"
   performanceCanvasContext.fillRect(0.0, height / 2.0, width, 1.0)
 
-proc drawPerformance*(self: Performance, ctx: CanvasContext2d, x, y: float): void =
+proc drawPerformance*(self: Performance, ctx: CanvasContext2d): void =
   self.drawLastFrame()
   ctx.fillStyle = "#fefefe"
-  ctx.fillRect(x, y, width, height)
-  ctx.drawImage(performanceCanvas, x, y)
+  ctx.fillRect(self.pos.x, self.pos.y, width, height)
+  ctx.drawImage(performanceCanvas, self.pos.x, self.pos.y)
