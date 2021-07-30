@@ -9,7 +9,6 @@ import strutils
 import tables
 import dom
 import performance
-import caching
 
 proc renderSegment*(ctx: CanvasContext2d, segment: PathSegment): void =
   case segment.kind
@@ -35,39 +34,13 @@ proc measureText(ctx: CanvasContext2d, textInfo: TextInfo): Size =
   let measured = ctx.canvas_measureText(textInfo.text)
   vec2(measured.width, measured.actualBoundingBoxDescent)
 
-
 proc renderText*(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], textInfo: TextInfo): void =
-  if textInfo in textCachePositions:
-    let cacheBounds = textCachePositions[textInfo]
-    ctx.drawImage(
-      textCache,
-      cacheBounds.pos.x,
-      cacheBounds.pos.y,
-      cacheBounds.size.x,
-      cacheBounds.size.y,
-      0.0,
-      0.0,
-      cacheBounds.size.x,
-      cacheBounds.size.y
-    )
-  else:
-    let textSize = ctx.measureText(textInfo)
-    assert(textSize.x < textCache.width)
-    assert(textSize.y < textCache.height)
-    if textSize.x > textCache.width - currentCachePos.x:
-      currentCachePos.x = 0.0
-      currentCachePos.y += currentCacheLineHeight
-      currentCacheLineHeight = 0.0
-    let ctx = textCache.getContext2d()
-    if colorInfo.isSome and colorInfo.get.fill.isSome:
-      ctx.fillStyle = colorInfo.get.fill.get.toHexCStr
-    ctx.textAlign = textInfo.alignment
-    ctx.textBaseline = textInfo.textBaseline
-    ctx.font = textInfo.fontWeight.toJs.toString().to(cstring) & space & textInfo.fontStyle & space & textInfo.fontSize.toJs.toString().to(cstring) & px & textInfo.fontFamily
-    ctx.fillText(textInfo.text, currentCachePos.x, currentCachePos.y)
-    textCachePositions[textInfo] = rect(currentCachePos.copy(), textSize.copy())
-    currentCachePos.x += textSize.x
-    currentCacheLineHeight = currentCacheLineHeight.max(textSize.y)
+  if colorInfo.isSome and colorInfo.get.fill.isSome:
+    ctx.fillStyle = colorInfo.get.fill.get.toHexCStr
+  ctx.textAlign = textInfo.alignment
+  ctx.textBaseline = textInfo.textBaseline
+  ctx.font = textInfo.fontWeight.toJs.toString().to(cstring) & space & textInfo.fontStyle & space & textInfo.fontSize.toJs.toString().to(cstring) & px & textInfo.fontFamily
+  ctx.fillText(textInfo.text, 0.0, 0.0)
 
 proc renderCircle*(ctx: CanvasContext2d, radius: float): void =
   ctx.beginPath()
@@ -257,3 +230,35 @@ proc renderPrimitive*(ctx: CanvasContext2d, p: Primitive): void =
       ctx.renderRectWithRadius(bounds, info.radius.get)
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
     perf.tock("rectangle")
+
+proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive): void =
+  ctx.save()
+  if primitive.opacity.isSome:
+    ctx.globalAlpha = primitive.opacity.get
+
+  perf.tick("translate")
+  ctx.translate(primitive.bounds.x, primitive.bounds.y)
+  perf.tock("translate")
+
+  perf.tick("transform")
+  for transform in  primitive.transform:
+    case transform.kind:
+      of Scaling:
+        ctx.scale(
+          transform.scale.x,
+          transform.scale.y
+        )
+      of Translation:
+        ctx.translate(transform.translation.x, transform.translation.y)
+      of Rotation:
+        ctx.rotate(transform.rotation)
+  perf.tock("transform")
+  if primitive.clipToBounds:
+    ctx.beginPath()
+    let cb = primitive.bounds
+    ctx.rect(0.0, 0.0, cb.size.x, cb.size.y)
+    ctx.clip()
+  ctx.renderPrimitive(primitive)
+  for p in primitive.children:
+    ctx.renderPrimitives(p)
+  ctx.restore()

@@ -16,7 +16,7 @@ proc renderPrimitives(canvasContext: CanvasContext2d, primitive: Primitive, size
   canvasContext.clearRect(0.0, 0.0, size.x, size.y)
 
   perf.tick("render canvas")
-  canvasContext.render(primitive, perf)
+  canvasContext.render(primitive)
   perf.tock("render canvas")
 
 proc renderPerformancePanel(ctx: CanvasContext2d): void =
