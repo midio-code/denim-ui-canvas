@@ -48,6 +48,20 @@ proc newPerformance*(pos: Point): Performance =
     currentFrame: 0
   )
 
+proc summarizeFrame(frame: Frame): JsMap[cstring, float] =
+  var summarizedEvents = newJsMap[cstring, float]()
+  for event in frame.events:
+    let
+      label = event[0]
+      ev = event[1]
+    if label notin summarizedEvents:
+      summarizedEvents.set(label, 0.0)
+    if ev.kind == EventKind.Tick:
+      summarizedEvents.set(label, summarizedEvents.get(label) - ev.time)
+    else:
+      summarizedEvents.set(label, summarizedEvents.get(label) + ev.time)
+  summarizedEvents
+
 proc tick*(self: Performance, label: cstring): void =
   if self.stopped:
     return
@@ -85,7 +99,20 @@ proc endFrame*(self: Performance): void =
   if self.stopped:
     return
   self.frames[self.currentFrame].endTime = performance.now()
+  if self.currentFrame == numFramesToDisplay - 1:
+    let completeSummarization = newJsMap[cstring, float]()
+    for frame in self.frames:
+      let summarized = summarizeFrame(frame)
+      for label, time in summarized:
+        if label notin completeSummarization:
+          completeSummarization.set(label, 0.0)
+        completeSummarization.set(label, completeSummarization.get(label) + time)
+    echo "Average of past 120 frames:"
+    for label, time in completeSummarization:
+      echo &"   {label}: {time / numFramesToDisplay.float}"
+
   self.currentFrame = floorMod(self.currentFrame + 1, numFramesToDisplay)
+
 
 proc onMouseMove*(self: Performance, x, y: float): void =
   if x >= self.pos.x and x < self.pos.x + width and y >= self.pos.y and y <= self.pos.y + height:
@@ -118,17 +145,7 @@ proc drawLastFrame(self: Performance): void =
   let numEvents = lastFrame.events.len
   var yPos = 0.0
 
-  var summarizedEvents = newJsMap[cstring, float]()
-  for event in lastFrame.events:
-    let
-      label = event[0]
-      ev = event[1]
-    if label notin summarizedEvents:
-      summarizedEvents.set(label, 0.0)
-    if ev.kind == EventKind.Tick:
-      summarizedEvents.set(label, summarizedEvents.get(label) - ev.time)
-    else:
-      summarizedEvents.set(label, summarizedEvents.get(label) + ev.time)
+  var summarizedEvents = summarizeFrame(lastFrame)
 
   for label, timeSpent in summarizedEvents:
     let barHeight = (timeSpent / (16.0 * 2.0)) * height
@@ -147,17 +164,7 @@ proc drawLastFrame(self: Performance): void =
   if self.hoveredFrame > 0 and self.hoveredFrame < numFramesToDisplay:
     let hoveredFrame = self.frames[self.hoveredFrame]
     if not isNil(hoveredFrame):
-      var summarizedEvents = newJsMap[cstring, float]()
-      for event in hoveredFrame.events:
-        let
-          label = event[0]
-          ev = event[1]
-        if label notin summarizedEvents:
-          summarizedEvents.set(label, 0.0)
-        if ev.kind == EventKind.Tick:
-          summarizedEvents.set(label,summarizedEvents.get(label) - ev.time)
-        else:
-          summarizedEvents.set(label,summarizedEvents.get(label) + ev.time)
+      var summarizedEvents = summarizeFrame(hoveredFrame)
       let numLabels = summarizedEvents.len
 
       const lineHeight = 22.0
@@ -185,5 +192,6 @@ proc drawPerformance*(self: Performance, ctx: CanvasContext2d): void =
   ctx.fillStyle = "#fefefe"
   ctx.fillRect(self.pos.x, self.pos.y, width, height)
   ctx.drawImage(performanceCanvas, self.pos.x, self.pos.y)
+
 
 let perf* = newPerformance(zero())
