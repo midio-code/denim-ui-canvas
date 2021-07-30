@@ -13,7 +13,7 @@ var console {.importc, nodecl.}: JsObject
 const width = 600.0
 const height = 130.0
 const textPanelWidth = 250.0
-const textPanelHeight = height * 2.0
+const textPanelHeight = height * 3.0
 const numFramesToDisplay = 120
 
 proc lerp(t, a, b: float): float =

@@ -10,6 +10,7 @@ import tables
 import sets
 import dom
 import hashes
+import jsSet
 import performance
 import caching
 
@@ -236,19 +237,19 @@ proc renderPrimitive*(ctx: CanvasContext2d, p: Primitive): void =
 
 # We need to swap between two sets here since we need to register for the next frame
 # while also checking for the previous frame
-var primitivesSeenLastFrame = [initHashSet[Hash](), initHashSet[Hash]()]
+var primitivesSeenLastFrame = [newJsSet[Hash](), newJsSet[Hash]()]
 var currentSet = 0
 
-proc getCurrentSet(): HashSet[Hash] =
+proc getSeenThisFrameSet(): JsSet[Hash] =
   primitivesSeenLastFrame[currentSet]
 
-proc getOtherSet(): var HashSet[Hash] =
+proc getSeenLastFrameSet(): JsSet[Hash] =
   primitivesSeenLastFrame[(currentSet + 1) mod 2]
 
 proc swapSets(): void =
   currentSet = (currentSet + 1) mod 2
 
-proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive): void =
+proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bool = false): void =
   ctx.save()
   if primitive.opacity.isSome:
     ctx.globalAlpha = primitive.opacity.get
@@ -278,22 +279,30 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive): void =
 
   if primitive.isCached:
     perf.count("Draw from cache")
+    perf.tick("Cached draw")
     ctx.drawFromCache(primitive)
-  elif primitive.id in getCurrentSet():
-    perf.count("Render to cache")
-    let cacheCtx = getCacheContextForPrimitive(primitive)
+    perf.tock("Cached draw")
+  elif primitive.id in getSeenLastFrameSet():
+    perf.count("Render to cache count")
+    perf.tick("Render to cache time")
+    let cacheCtx =
+      if not isCaching:
+        getCacheContextForPrimitive(primitive)
+      else:
+        ctx
     cacheCtx.renderPrimitive(primitive)
     for p in primitive.children:
-      cacheCtx.renderPrimitives(p)
+      cacheCtx.renderPrimitives(p, true)
+    perf.tock("Render to cache time")
   else:
     perf.count("Uncached render")
     ctx.renderPrimitive(primitive)
     for p in primitive.children:
-      ctx.renderPrimitives(p)
+      ctx.renderPrimitives(p, isCaching)
   ctx.restore()
-  getOtherSet().incl(primitive.id)
+  getSeenThisFrameSet().incl(primitive.id)
 
 proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
-  getOtherSet().clear()
+  getSeenThisFrameSet().clear()
   ctx.renderPrimitives(primitive)
   swapSets()
