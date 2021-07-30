@@ -62,7 +62,7 @@ proc summarizeFrame(frame: Frame): JsMap[cstring, float] =
       summarizedEvents.set(label, summarizedEvents.get(label) + ev.time)
   summarizedEvents
 
-proc tick*(self: Performance, label: cstring): void =
+proc tickImpl(self: Performance, label: cstring): void =
   if self.stopped:
     return
 
@@ -71,13 +71,21 @@ proc tick*(self: Performance, label: cstring): void =
     (label, Event(kind: EventKind.Tick, time: time))
   )
 
-proc tock*(self: Performance, label: cstring): void =
+template tick*(self: Performance, label: cstring): void =
+  when defined(visualize_performance):
+    tickImpl(self, label)
+
+proc tockImpl(self: Performance, label: cstring): void =
   if self.stopped:
     return
 
   self.frames[self.currentFrame].events.add(
     (label, Event(kind: EventKind.Tock, time: performance.now()))
   )
+
+template tock*(self: Performance, label: cstring): void =
+  when defined(visualize_performance):
+    tockImpl(self, label)
 
 var performanceCanvas = createCanvas()
 performanceCanvas.width = width + textPanelWidth

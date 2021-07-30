@@ -7,6 +7,7 @@ import native_elements/text_input
 import native_elements/native_text
 import denim_ui
 import performance
+import drawing_primitives
 
 proc performanceNow(): float {.importjs: "performance.now()".}
 
