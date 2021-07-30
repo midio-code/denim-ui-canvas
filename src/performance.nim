@@ -167,16 +167,17 @@ proc drawLastFrame(self: Performance): void =
 
   var summarizedEvents = summarizeFrame(lastFrame)
 
-  for label, timeSpent in summarizedEvents:
-    let barHeight = (timeSpent / (16.0 * 2.0)) * height
-    performanceCanvasContext.fillStyle = $color
-    performanceCanvasContext.strokeStyle = cstring("#555555")
-    performanceCanvasContext.lineWidth = 1.0
-    let x = barWidth * lastFrameIndex.float
-    let y = height - barHeight - yPos
-    performanceCanvasContext.fillRect(x, y, barWidth, barHeight)
-    performanceCanvasContext.strokeRect(x, y, barWidth, barHeight)
-    yPos += barHeight
+  let timeSpent = lastFrame.endTime - lastFrame.startTime
+  let barHeight = (timeSpent / (16.0 * 2.0)) * height
+
+  performanceCanvasContext.fillStyle = $color
+  performanceCanvasContext.strokeStyle = cstring("#555555")
+  performanceCanvasContext.lineWidth = 1.0
+  let x = barWidth * lastFrameIndex.float
+  let y = height - barHeight - yPos
+  performanceCanvasContext.fillRect(x, y, barWidth, barHeight)
+  performanceCanvasContext.strokeRect(x, y, barWidth, barHeight)
+
   # Render 60fps line
   performanceCanvasContext.fillStyle = cstring("#004400")
   performanceCanvasContext.fillRect(0.0, height / 2.0, width, 1.0)
