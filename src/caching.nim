@@ -4,7 +4,6 @@ import canvas
 import jsMap
 import hashes
 import strformat
-import drawing_primitives
 
 type
   Cache = ref object
@@ -45,15 +44,16 @@ proc findNextAvailableCachePosition(cache: Cache, bounds: Bounds): Point =
   if heightLeft < bounds.size.y:
     # NOTE: We must evict something from the cache
     raise newException(Exception, &"Cache is full")
+  pos
 
-proc cachePrimitive*(p: Primitive): void =
+proc getCacheContextForPrimitive*(p: Primitive): CanvasContext2d =
   let cache = caches.mgetorput(p.kind, newCache())
   let ctx = cache.context
   let pos = cache.findNextAvailableCachePosition(p.bounds)
   ctx.translate(pos.x, pos.y)
-  ctx.renderPrimitives(p)
+  ctx
 
-proc isCached(p: Primitive): bool =
+proc isCached*(p: Primitive): bool =
   p.kind in caches and p.id in caches[p.kind].cachePositions
 
 proc drawFromCache*(ctx: CanvasContext2d, p: Primitive): void =
