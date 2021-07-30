@@ -32,6 +32,7 @@ type
     startTime: float
     endTime: float
     events: seq[tuple[label: cstring, event: Event]]
+    counters: JsMap[cstring, int]
 
   Performance* = ref object
     stopped: bool
@@ -87,6 +88,16 @@ template tock*(self: Performance, label: cstring): void =
   when defined(visualize_performance):
     tockImpl(self, label)
 
+proc countImpl(self: Performance, label: cstring): void =
+  let cf = self.frames[self.currentFrame]
+  if label notin cf.counters:
+    cf.counters[label] = 0
+  cf.counters[label] = cf.counters[label] + 1
+
+template count*(self: Performance, label: cstring): void =
+  when defined(visualize_performance):
+    countImpl(self, label)
+
 var performanceCanvas = createCanvas()
 performanceCanvas.width = width + textPanelWidth
 performanceCanvas.height = height + 500.0
@@ -100,7 +111,8 @@ proc beginFrame*(self: Performance): void =
   console.timeStamp("Frame " & $self.currentFrame)
   self.frames[self.currentFrame] = Frame(
     startTime: performance.now(),
-    events: newSeqOfCap[(cstring, Event)](100)
+    events: newSeqOfCap[(cstring, Event)](100),
+    counters: newJsMap[cstring, int]()
   )
 
 proc endFrame*(self: Performance): void =
@@ -188,7 +200,10 @@ proc drawLastFrame(self: Performance): void =
       performanceCanvasContext.fillText(&"Frame: {self.hoveredFrame}", width + 5.0, yPos)
       yPos += lineHeight
       for label, timeSpent in summarizedEvents:
-        performanceCanvasContext.fillText(&"{label}: {$timeSpent:3.3}", width + 5.0, yPos)
+        performanceCanvasContext.fillText(&"{label}: {$timeSpent:3.3}ms", width + 5.0, yPos)
+        yPos += lineHeight
+      for label, count in hoveredFrame.counters:
+        performanceCanvasContext.fillText(&"{label}: {$count}", width + 5.0, yPos)
         yPos += lineHeight
 
       let hoveredFrameTime = hoveredFrame.endTime - hoveredFrame.startTime

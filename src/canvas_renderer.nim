@@ -277,13 +277,16 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive): void =
     ctx.clip()
 
   if primitive.isCached:
+    perf.count("Draw from cache")
     ctx.drawFromCache(primitive)
   elif primitive.id in getCurrentSet():
+    perf.count("Render to cache")
     let cacheCtx = getCacheContextForPrimitive(primitive)
     cacheCtx.renderPrimitive(primitive)
     for p in primitive.children:
       cacheCtx.renderPrimitives(p)
   else:
+    perf.count("Uncached render")
     ctx.renderPrimitive(primitive)
     for p in primitive.children:
       ctx.renderPrimitives(p)
