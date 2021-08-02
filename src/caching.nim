@@ -13,7 +13,7 @@ type
     currentLineHeight: float
     cacheBounds: JsMap[Hash, Bounds]
 
-const cacheSize = 2048.0
+const cacheSize = 4096.0
 proc newCache(): Cache =
   let canvas = createCanvas()
   canvas.width = cacheSize
@@ -29,7 +29,7 @@ proc newCache(): Cache =
 proc context(cache: Cache): CanvasContext2d =
   cache.canvas.getContext2d()
 
-var caches = newJsMap[PrimitiveKind, Cache]()
+var caches = newCache()
 
 proc findNextAvailableCachePosition(cache: Cache, bounds: Bounds): Point =
   ## Finds a position in the cache that can accomodate `bounds`
@@ -52,7 +52,7 @@ proc findNextAvailableCachePosition(cache: Cache, bounds: Bounds): Point =
   pos
 
 proc getCacheContextForPrimitive*(p: Primitive, scale: Vec2[float]): CanvasContext2d =
-  let cache = caches.mgetorput(p.kind, newCache())
+  let cache = caches
   let ctx = cache.context
   ctx.restore()
   let scaledBounds = rect(zero(), p.bounds.size * scale)
@@ -64,11 +64,11 @@ proc getCacheContextForPrimitive*(p: Primitive, scale: Vec2[float]): CanvasConte
   ctx
 
 proc isCached*(p: Primitive): bool =
-  p.kind in caches and p.id in caches[p.kind].cacheBounds
+  p.id in caches.cacheBounds
 
 proc drawFromCache*(ctx: CanvasContext2d, p: Primitive): void =
   assert(p.isCached)
-  let cache = caches[p.kind]
+  let cache = caches
   let bounds = cache.cacheBounds[p.id]
   let
     pos = bounds.pos

@@ -61,7 +61,6 @@ proc renderImage*(ctx: CanvasContext2d, bounds: Bounds, info: ImageInfo): void =
   image.src = info.uri
   ctx.drawImage(image, bounds.pos.x, bounds.pos.y, bounds.size.x, bounds.size.y)
 
-
 proc setShadow(ctx: CanvasContext2d, shadow: Option[Shadow]): void =
   if shadow.isSome:
     let s = shadow.get
@@ -279,7 +278,11 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, scale: Vec2[f
     ctx.rect(0.0, 0.0, cb.size.x, cb.size.y)
     ctx.clip()
 
-  let shouldCache = primitive.kind == PrimitiveKind.Rectangle or primitive.kind == PrimitiveKind.Path or primitive.kind == PrimitiveKind.Text
+  getSeenThisFrameSet().incl(primitive.id)
+  let wasSeenLastFrame = primitive.id in getSeenLastFrameSet()
+  #echo "Primitive: ", $primitive
+
+  var shouldCache = primitive.bounds.size.x < 400.0 and primitive.bounds.size.y < 800.0
 
   if primitive.isCached:
     perf.count("Draw from cache")
@@ -304,7 +307,6 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, scale: Vec2[f
     for p in primitive.children:
       ctx.renderPrimitives(p, currentScale, isCaching)
   ctx.restore()
-  getSeenThisFrameSet().incl(primitive.id)
 
 proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
   getSeenThisFrameSet().clear()
