@@ -13,7 +13,7 @@ type
     currentLineHeight: float
     cacheBounds: JsMap[Hash, Bounds]
 
-const cacheSize = 4096.0
+const cacheSize = 2048.0
 proc newCache(): Cache =
   let canvas = createCanvas()
   canvas.width = cacheSize
@@ -33,7 +33,7 @@ var caches = newJsMap[PrimitiveKind, Cache]()
 
 proc findNextAvailableCachePosition(cache: Cache, bounds: Bounds): Point =
   ## Finds a position in the cache that can accomodate `bounds`
-  var pos = cache.currentPos
+  var pos = cache.currentPos.copy()
 
   cache.currentLineHeight = max(cache.currentLineHeight, bounds.size.y)
 
@@ -41,6 +41,9 @@ proc findNextAvailableCachePosition(cache: Cache, bounds: Bounds): Point =
   if widthLeft < bounds.size.x:
     pos.x = 0
     pos.y += cache.currentLineHeight
+    cache.currentPos = pos
+  else:
+    cache.currentPos.x += bounds.size.x
 
   let heightLeft = cache.size.y - cache.currentPos.y
   if heightLeft < bounds.size.y:
@@ -48,14 +51,17 @@ proc findNextAvailableCachePosition(cache: Cache, bounds: Bounds): Point =
     raise newException(Exception, &"Cache is full")
   pos
 
-proc getCacheContextForPrimitive*(p: Primitive): CanvasContext2d =
+proc getCacheContextForPrimitive*(p: Primitive, scale: Vec2[float]): CanvasContext2d =
   let cache = caches.mgetorput(p.kind, newCache())
   let ctx = cache.context
-  let pos = cache.findNextAvailableCachePosition(p.bounds)
-  cache.cacheBounds[p.id] = rect(pos, p.bounds.size)
+  ctx.restore()
+  let scaledBounds = rect(zero(), p.bounds.size * scale)
+  let pos = cache.findNextAvailableCachePosition(scaledBounds)
+  cache.cacheBounds[p.id] = rect(pos, scaledBounds.size)
+  ctx.save()
   ctx.translate(pos.x, pos.y)
+  ctx.scale(scale.x, scale.y)
   ctx
-
 
 proc isCached*(p: Primitive): bool =
   p.kind in caches and p.id in caches[p.kind].cacheBounds

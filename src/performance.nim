@@ -89,6 +89,8 @@ template tock*(self: Performance, label: cstring): void =
     tockImpl(self, label)
 
 proc countImpl(self: Performance, label: cstring): void =
+  if isNil(self.frames[self.currentFrame]):
+    return
   let cf = self.frames[self.currentFrame]
   if label notin cf.counters:
     cf.counters[label] = 0

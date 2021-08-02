@@ -249,7 +249,7 @@ proc getSeenLastFrameSet(): JsSet[Hash] =
 proc swapSets(): void =
   currentSet = (currentSet + 1) mod 2
 
-proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bool = false): void =
+proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, scale: Vec2[float] = vec2(1.0, 1.0), isCaching: bool = false): void =
   ctx.save()
   if primitive.opacity.isSome:
     ctx.globalAlpha = primitive.opacity.get
@@ -259,6 +259,7 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bo
   perf.tock("translate")
 
   perf.tick("transform")
+  var currentScale = scale.copy()
   for transform in  primitive.transform:
     case transform.kind:
       of Scaling:
@@ -266,6 +267,7 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bo
           transform.scale.x,
           transform.scale.y
         )
+        currentScale = scale * vec2(transform.scale.x, transform.scale.y)
       of Translation:
         ctx.translate(transform.translation.x, transform.translation.y)
       of Rotation:
@@ -277,28 +279,30 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bo
     ctx.rect(0.0, 0.0, cb.size.x, cb.size.y)
     ctx.clip()
 
+  let shouldCache = primitive.kind == PrimitiveKind.Rectangle or primitive.kind == PrimitiveKind.Path or primitive.kind == PrimitiveKind.Text
+
   if primitive.isCached:
     perf.count("Draw from cache")
     perf.tick("Cached draw")
     ctx.drawFromCache(primitive)
     perf.tock("Cached draw")
-  elif primitive.id in getSeenLastFrameSet():
+  elif shouldCache and primitive.id in getSeenLastFrameSet():
     perf.count("Render to cache count")
     perf.tick("Render to cache time")
     let cacheCtx =
       if not isCaching:
-        getCacheContextForPrimitive(primitive)
+        getCacheContextForPrimitive(primitive, currentScale)
       else:
         ctx
     cacheCtx.renderPrimitive(primitive)
     for p in primitive.children:
-      cacheCtx.renderPrimitives(p, true)
+      cacheCtx.renderPrimitives(p, currentScale, true)
     perf.tock("Render to cache time")
   else:
     perf.count("Uncached render")
     ctx.renderPrimitive(primitive)
     for p in primitive.children:
-      ctx.renderPrimitives(p, isCaching)
+      ctx.renderPrimitives(p, currentScale, isCaching)
   ctx.restore()
   getSeenThisFrameSet().incl(primitive.id)
 
