@@ -11,6 +11,7 @@ import sets
 import dom
 import hashes
 import jsSet
+import jsMap
 import performance
 import caching
 
@@ -234,19 +235,34 @@ proc renderPrimitive*(ctx: CanvasContext2d, p: Primitive): void =
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
     perf.tock("rectangle")
 
-# We need to swap between two sets here since we need to register for the next frame
-# while also checking for the previous frame
-var primitivesSeenLastFrame = [newJsSet[Hash](), newJsSet[Hash]()]
-var currentSet = 0
 
-proc getSeenThisFrameSet(): JsSet[Hash] =
-  primitivesSeenLastFrame[currentSet]
 
-proc getSeenLastFrameSet(): JsSet[Hash] =
-  primitivesSeenLastFrame[(currentSet + 1) mod 2]
+var primitivesSeenThisFrame = newJsSet[Hash]()
+var counters = newJsMap[Hash, int]()
 
-proc swapSets(): void =
-  currentSet = (currentSet + 1) mod 2
+
+proc registerPrimitiveCurrentFrame(p: Primitive) =
+  primitivesSeenThisFrame.incl(p.id)
+
+proc seenPastNumberOfFrames(p: Primitive): int =
+  ## Returns how many of the past frames this primitive has been seen
+  counters[p.id]
+
+proc endFrame(): void =
+  for hash in primitivesSeenThisFrame:
+    if hash notin counters:
+      counters[hash] = 0
+    counters[hash] = counters[hash] + 1
+
+  var toRemove: seq[Hash] = @[]
+  for k,v in counters:
+    if k notin primitivesSeenThisFrame:
+      toRemove.add(k)
+  primitivesSeenThisFrame.clear()
+  for remove in toRemove:
+    counters.delete(remove)
+
+const cacheWhenPrimitiveHasExistedForNFrames = 4
 
 proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bool = false): void =
 
@@ -280,14 +296,15 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bo
       ctx.rect(0.0, 0.0, cb.size.x, cb.size.y)
       ctx.clip()
 
-    getSeenThisFrameSet().incl(primitive.id)
-    let wasSeenLastFrame = primitive.id in getSeenLastFrameSet()
-
     if isCaching:
       perf.count("Caching")
+    else:
+      perf.count("Uncached")
 
-    if not isCaching and primitive.cache: # and primitive.id in getSeenLastFrameSet():
+    let seenEnoughTimesToCache = seenPastNumberOfFrames(primitive) >= cacheWhenPrimitiveHasExistedForNFrames
+    if not isCaching and primitive.cache and seenEnoughTimesToCache:
       let cacheCtx = getCacheContextForPrimitive(primitive)
+      perf.count("Caching")
       cacheCtx.renderPrimitive(primitive)
       for p in primitive.children:
         cacheCtx.renderPrimitives(p, true)
@@ -297,8 +314,8 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bo
       for p in primitive.children:
         ctx.renderPrimitives(p, isCaching)
   ctx.restore()
+  registerPrimitiveCurrentFrame(primitive)
 
 proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
-  getSeenThisFrameSet().clear()
   ctx.renderPrimitives(primitive)
-  swapSets()
+  endFrame()

@@ -7,6 +7,7 @@ proc newJsMap*[TKey, TVal](): JsMap[TKey, TVal] {.importjs: "new Map()".}
 proc contains*[TKey, TVal](self: JsMap[TKey, TVal], item: TKey): bool {.importjs: "#.has(#)".}
 proc get*[TKey, TVal](self: JsMap[TKey, TVal], key: TKey): TVal {.importjs: "#.get(#)".}
 proc set*[TKey, TVal](self: JsMap[TKey, TVal], key: TKey, val: TVal): void {.importjs: "#.set(#, #)".}
+proc delete*[TKey, TVal](self: JsMap[TKey, TVal], key: TKey): void {.importjs: "#.delete(#)".}
 proc len*[TKey, TVal](self: JsMap[Tkey, TVal]): int {.importjs: "#.size".}
 
 template `[]`*[TKey,TVal](self: JsMap[TKey, TVal], key: TKey): TVal =
