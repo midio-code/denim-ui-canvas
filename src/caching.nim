@@ -55,26 +55,20 @@ proc findNextAvailableCachePosition(cache: Cache, bounds: Bounds): Point =
     raise newException(Exception, &"Cache is full")
   vec2(pos.x.ceil(), pos.y.ceil())
 
-proc getCacheContextForPrimitive*(p: Primitive, scale: Vec2[float]): CanvasContext2d =
+proc getCacheContextForPrimitive*(p: Primitive): CanvasContext2d =
   let cache = caches
   let ctx = cache.context
-  #let scaledBounds = rect(zero(), p.bounds.size * scale)
-  let scaledBounds = rect(zero(), p.bounds.size)
-  let pos = cache.findNextAvailableCachePosition(scaledBounds)
+  let bounds = rect(zero(), p.bounds.size)
+  let pos = cache.findNextAvailableCachePosition(bounds)
 
-  cache.cacheBounds[p.id] = rect(pos.copy(), scaledBounds.size)
-  echo "Caching to bounds: ", cache.cacheBounds[p.id]
+  cache.cacheBounds[p.id] = rect(pos.copy(), bounds.size)
 
-  #ctx.setTransform(scale.x, 0.0, 0.0, scale.y, pos.x, pos.y)
   ctx.setTransform(1.0, 0.0, 0.0, 1.0, pos.x, pos.y)
-  # ctx.beginPath()
-  # ctx.rect(0.0, 0.0, scaledBounds.size.x, scaledBounds.size.y)
-  # ctx.clip()
 
   ctx.save()
   ctx.strokeStyle = "#ff0000"
   ctx.lineWidth = 2.0
-  ctx.strokeRect(0.0, 0.0, scaledBounds.size.x, scaledBounds.size.y)
+  ctx.strokeRect(0.0, 0.0, bounds.size.x, bounds.size.y)
   ctx.restore()
 
 
@@ -91,5 +85,4 @@ proc drawFromCache*(ctx: CanvasContext2d, p: Primitive): void =
     pos = bounds.pos.copy()
     size = bounds.size.copy()
 
-  echo "Drawing from cache: ", bounds
   ctx.drawImage(cache.canvas, pos.x, pos.y, size.x, size.y, 0.0, 0.0, size.x, size.y)

@@ -248,7 +248,7 @@ proc getSeenLastFrameSet(): JsSet[Hash] =
 proc swapSets(): void =
   currentSet = (currentSet + 1) mod 2
 
-proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, scale: Vec2[float] = vec2(1.0, 1.0), isCaching: bool = false): void =
+proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bool = false): void =
 
   ctx.save()
 
@@ -257,7 +257,6 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, scale: Vec2[f
     perf.count("Draw from cache")
     ctx.drawFromCache(primitive)
   else:
-    var currentScale = scale.copy()
     for transform in  primitive.transform:
       case transform.kind:
         of Scaling:
@@ -265,7 +264,6 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, scale: Vec2[f
             transform.scale.x,
             transform.scale.y
           )
-          currentScale = scale * vec2(transform.scale.x, transform.scale.y)
         of Translation:
           ctx.translate(transform.translation.x, transform.translation.y)
         of Rotation:
@@ -289,19 +287,18 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, scale: Vec2[f
       perf.count("Caching")
 
     if not isCaching and primitive.cache: # and primitive.id in getSeenLastFrameSet():
-      let cacheCtx = getCacheContextForPrimitive(primitive, currentScale)
+      let cacheCtx = getCacheContextForPrimitive(primitive)
       cacheCtx.renderPrimitive(primitive)
       for p in primitive.children:
-        cacheCtx.renderPrimitives(p, currentScale, true)
+        cacheCtx.renderPrimitives(p, true)
       ctx.drawFromCache(primitive)
     else:
       ctx.renderPrimitive(primitive)
       for p in primitive.children:
-        ctx.renderPrimitives(p, currentScale, isCaching)
+        ctx.renderPrimitives(p, isCaching)
   ctx.restore()
 
 proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
-  echo "FRAME"
   getSeenThisFrameSet().clear()
   ctx.renderPrimitives(primitive)
   swapSets()
