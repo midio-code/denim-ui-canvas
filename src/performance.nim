@@ -7,6 +7,7 @@ import math
 import colors
 import denim_ui
 import jsMap
+import caching
 
 var console {.importc, nodecl.}: JsObject
 
@@ -14,6 +15,7 @@ const width = 600.0
 const height = 130.0
 const textPanelWidth = 250.0
 const textPanelHeight = height * 3.0
+const cacheTextureSize = 400.0
 const numFramesToDisplay = 120
 
 proc lerp(t, a, b: float): float =
@@ -101,7 +103,7 @@ template count*(self: Performance, label: cstring): void =
     countImpl(self, label)
 
 var performanceCanvas = createCanvas()
-performanceCanvas.width = width + textPanelWidth
+performanceCanvas.width = width + textPanelWidth  + cacheTextureSize
 performanceCanvas.height = height + 500.0
 
 let performanceCanvasContext = performanceCanvas.getContext2d()
@@ -212,6 +214,9 @@ proc drawLastFrame(self: Performance): void =
       let hoveredFrameTime = hoveredFrame.endTime - hoveredFrame.startTime
       performanceCanvasContext.fillText(&"Total: {hoveredFrameTime:3.3}", width + 5.0, yPos)
 
+  performanceCanvasContext.fillStyle = "#220000"
+  performanceCanvasContext.fillRect(width + textPanelWidth, 0.0, cacheTextureSize, cacheTextureSize)
+  performanceCanvasContext.drawImage(caches.canvas, 0.0, 0.0, cacheSize, cacheSize, width + textPanelWidth, 0.0, cacheTextureSize, cacheTextureSize)
 
 proc drawPerformance*(self: Performance, ctx: CanvasContext2d): void =
   self.drawLastFrame()
