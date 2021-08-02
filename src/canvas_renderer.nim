@@ -249,66 +249,59 @@ proc swapSets(): void =
   currentSet = (currentSet + 1) mod 2
 
 proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, scale: Vec2[float] = vec2(1.0, 1.0), isCaching: bool = false): void =
+
   ctx.save()
-  if primitive.opacity.isSome:
-    ctx.globalAlpha = primitive.opacity.get
 
-  perf.tick("translate")
-  ctx.translate(primitive.bounds.x, primitive.bounds.y)
-  perf.tock("translate")
-
-  perf.tick("transform")
-  var currentScale = scale.copy()
-  for transform in  primitive.transform:
-    case transform.kind:
-      of Scaling:
-        ctx.scale(
-          transform.scale.x,
-          transform.scale.y
-        )
-        currentScale = scale * vec2(transform.scale.x, transform.scale.y)
-      of Translation:
-        ctx.translate(transform.translation.x, transform.translation.y)
-      of Rotation:
-        ctx.rotate(transform.rotation)
-  perf.tock("transform")
-  if primitive.clipToBounds:
-    ctx.beginPath()
-    let cb = primitive.bounds
-    ctx.rect(0.0, 0.0, cb.size.x, cb.size.y)
-    ctx.clip()
-
-  getSeenThisFrameSet().incl(primitive.id)
-  let wasSeenLastFrame = primitive.id in getSeenLastFrameSet()
-  #echo "Primitive: ", $primitive
-
-  var shouldCache = primitive.bounds.size.x < 400.0 and primitive.bounds.size.y < 800.0
-
-  if primitive.isCached:
+  if not isCaching and primitive.isCached:
+    ctx.translate(primitive.bounds.x, primitive.bounds.y)
     perf.count("Draw from cache")
-    perf.tick("Cached draw")
     ctx.drawFromCache(primitive)
-    perf.tock("Cached draw")
-  elif shouldCache and primitive.id in getSeenLastFrameSet():
-    perf.count("Render to cache count")
-    perf.tick("Render to cache time")
-    let cacheCtx =
-      if not isCaching:
-        getCacheContextForPrimitive(primitive, currentScale)
-      else:
-        ctx
-    cacheCtx.renderPrimitive(primitive)
-    for p in primitive.children:
-      cacheCtx.renderPrimitives(p, currentScale, true)
-    perf.tock("Render to cache time")
   else:
-    perf.count("Uncached render")
-    ctx.renderPrimitive(primitive)
-    for p in primitive.children:
-      ctx.renderPrimitives(p, currentScale, isCaching)
+    var currentScale = scale.copy()
+    for transform in  primitive.transform:
+      case transform.kind:
+        of Scaling:
+          ctx.scale(
+            transform.scale.x,
+            transform.scale.y
+          )
+          currentScale = scale * vec2(transform.scale.x, transform.scale.y)
+        of Translation:
+          ctx.translate(transform.translation.x, transform.translation.y)
+        of Rotation:
+          ctx.rotate(transform.rotation)
+
+    ctx.translate(primitive.bounds.x, primitive.bounds.y)
+
+    if primitive.opacity.isSome:
+      ctx.globalAlpha = primitive.opacity.get
+
+    if primitive.clipToBounds:
+      ctx.beginPath()
+      let cb = primitive.bounds
+      ctx.rect(0.0, 0.0, cb.size.x, cb.size.y)
+      ctx.clip()
+
+    getSeenThisFrameSet().incl(primitive.id)
+    let wasSeenLastFrame = primitive.id in getSeenLastFrameSet()
+
+    if isCaching:
+      perf.count("Caching")
+
+    if not isCaching and primitive.cache: # and primitive.id in getSeenLastFrameSet():
+      let cacheCtx = getCacheContextForPrimitive(primitive, currentScale)
+      cacheCtx.renderPrimitive(primitive)
+      for p in primitive.children:
+        cacheCtx.renderPrimitives(p, currentScale, true)
+      ctx.drawFromCache(primitive)
+    else:
+      ctx.renderPrimitive(primitive)
+      for p in primitive.children:
+        ctx.renderPrimitives(p, currentScale, isCaching)
   ctx.restore()
 
 proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
+  echo "FRAME"
   getSeenThisFrameSet().clear()
   ctx.renderPrimitives(primitive)
   swapSets()

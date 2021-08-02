@@ -4,6 +4,7 @@ import canvas
 import jsMap
 import hashes
 import strformat
+import math
 
 type
   Cache = ref object
@@ -31,36 +32,52 @@ proc context(cache: Cache): CanvasContext2d =
 
 var caches = newCache()
 
+const padding = 4.0
+
 proc findNextAvailableCachePosition(cache: Cache, bounds: Bounds): Point =
   ## Finds a position in the cache that can accomodate `bounds`
   var pos = cache.currentPos.copy()
 
-  cache.currentLineHeight = max(cache.currentLineHeight, bounds.size.y)
+  cache.currentLineHeight = max(cache.currentLineHeight, bounds.size.y).ceil()
 
   let widthLeft = cache.size.x - cache.currentPos.x
   if widthLeft < bounds.size.x:
-    pos.x = 0
-    pos.y += cache.currentLineHeight
-    cache.currentPos = pos
+    pos.x = 0.0
+    pos.y += cache.currentLineHeight + padding
+    cache.currentLineHeight = bounds.size.y.ceil()
+    cache.currentPos = pos.copy()
   else:
-    cache.currentPos.x += bounds.size.x
+    cache.currentPos.x += bounds.size.x.ceil() + padding
 
   let heightLeft = cache.size.y - cache.currentPos.y
   if heightLeft < bounds.size.y:
     # NOTE: We must evict something from the cache
     raise newException(Exception, &"Cache is full")
-  pos
+  vec2(pos.x.ceil(), pos.y.ceil())
 
 proc getCacheContextForPrimitive*(p: Primitive, scale: Vec2[float]): CanvasContext2d =
   let cache = caches
   let ctx = cache.context
-  ctx.restore()
-  let scaledBounds = rect(zero(), p.bounds.size * scale)
+  #let scaledBounds = rect(zero(), p.bounds.size * scale)
+  let scaledBounds = rect(zero(), p.bounds.size)
   let pos = cache.findNextAvailableCachePosition(scaledBounds)
-  cache.cacheBounds[p.id] = rect(pos, scaledBounds.size)
+
+  cache.cacheBounds[p.id] = rect(pos.copy(), scaledBounds.size)
+  echo "Caching to bounds: ", cache.cacheBounds[p.id]
+
+  #ctx.setTransform(scale.x, 0.0, 0.0, scale.y, pos.x, pos.y)
+  ctx.setTransform(1.0, 0.0, 0.0, 1.0, pos.x, pos.y)
+  # ctx.beginPath()
+  # ctx.rect(0.0, 0.0, scaledBounds.size.x, scaledBounds.size.y)
+  # ctx.clip()
+
   ctx.save()
-  ctx.translate(pos.x, pos.y)
-  ctx.scale(scale.x, scale.y)
+  ctx.strokeStyle = "#ff0000"
+  ctx.lineWidth = 2.0
+  ctx.strokeRect(0.0, 0.0, scaledBounds.size.x, scaledBounds.size.y)
+  ctx.restore()
+
+
   ctx
 
 proc isCached*(p: Primitive): bool =
@@ -71,6 +88,8 @@ proc drawFromCache*(ctx: CanvasContext2d, p: Primitive): void =
   let cache = caches
   let bounds = cache.cacheBounds[p.id]
   let
-    pos = bounds.pos
-    size = bounds.size
+    pos = bounds.pos.copy()
+    size = bounds.size.copy()
+
+  echo "Drawing from cache: ", bounds
   ctx.drawImage(cache.canvas, pos.x, pos.y, size.x, size.y, 0.0, 0.0, size.x, size.y)

@@ -129,9 +129,9 @@ proc endFrame*(self: Performance): void =
         if label notin completeSummarization:
           completeSummarization.set(label, 0.0)
         completeSummarization.set(label, completeSummarization.get(label) + time)
-    echo "Average of past 120 frames:"
-    for label, time in completeSummarization:
-      echo &"   {label}: {time / numFramesToDisplay.float}"
+    # echo "Average of past 120 frames:"
+    # for label, time in completeSummarization:
+    #   echo &"   {label}: {time / numFramesToDisplay.float}"
 
   self.currentFrame = floorMod(self.currentFrame + 1, numFramesToDisplay)
 

@@ -79,9 +79,9 @@ proc drawImage*(ctx: CanvasContext2d, img: Image, sx, sy, sw, sh, dx, dy, dw, dh
 proc drawImage*(ctx: CanvasContext2d, img: Image, sx, sy, sw, sh: float): void {.importjs: "#.drawImage(@)".}
 proc drawImage*(ctx: CanvasContext2d, img: Image, dx, dy: float): void {.importjs: "#.drawImage(@)".}
 
+proc drawImage*(ctx: CanvasContext2d, img: Canvas, sx, sy, sw, sh, dx, dy, dw, dh: float): void {.importjs: "#.drawImage(@)".}
 proc drawImage*(ctx: CanvasContext2d, img: Canvas, dx, dy: float): void {.importjs: "#.drawImage(@)".}
 proc drawImage*(ctx: CanvasContext2d, img: Canvas, dx, dy, dw, dh: float): void {.importjs: "#.drawImage(@)".}
-proc drawImage*(ctx: CanvasContext2d, img: Canvas, sx, sy, sw, sh, dx, dy, dw, dh: float): void {.importjs: "#.drawImage(@)".}
 
 
 proc transform*(
@@ -97,6 +97,7 @@ proc transform*(
 proc rotate*(c: CanvasContext2d, angle: float) {.importjs: "#.rotate(@)".}
 proc scale*(c: CanvasContext2d, x: float, y: float) {.importjs: "#.scale(@)".}
 proc translate*(c: CanvasContext2d, x: float, y: float) {.importjs: "#.translate(@)".}
+proc setTransform*(ctx: CanvasContext2d, a,b,c,d,e,f: float) {.importjs: "#.setTransform(@)".}
 proc resetTransform*(c: CanvasContext2d) {.importjs: "#.resetTransform()".}
 
 
