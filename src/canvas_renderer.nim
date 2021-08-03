@@ -30,12 +30,20 @@ proc renderSegment(ctx: CanvasContext2d, segment: PathSegment): void =
 
 const px: cstring = "px "
 const space: cstring = " "
-proc renderText(ctx: CanvasContext2d, colorInfo: Option[ColorInfo], textInfo: TextInfo): void =
+proc renderText(ctx: CanvasContext2d, bounds: Bounds, colorInfo: Option[ColorInfo], textInfo: TextInfo): void =
   if colorInfo.isSome and colorInfo.get.fill.isSome:
     ctx.fillStyle = colorInfo.get.fill.get.toHexCStr
   ctx.textAlign = textInfo.alignment
   ctx.textBaseline = textInfo.textBaseline
   ctx.font = textInfo.fontWeight.toJs.toString().to(cstring) & space & textInfo.fontStyle & space & textInfo.fontSize.toJs.toString().to(cstring) & px & textInfo.fontFamily
+
+  when defined(draw_boxes_around_text):
+    ctx.save()
+    ctx.strokeStyle = "#ff0000"
+    ctx.lineWidth = 1.0
+    ctx.strokeRect(0.0, 0.0, bounds.size.x, bounds.size.y)
+    ctx.restore()
+
   ctx.fillText(textInfo.text, 0.0, 0.0)
 
 proc renderCircle(ctx: CanvasContext2d, radius: float): void =
@@ -195,7 +203,7 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
     perf.tock("path")
   of PrimitiveKind.Text:
     perf.tick("text")
-    renderText(ctx, p.colorInfo, p.textInfo)
+    renderText(ctx, p.bounds, p.colorInfo, p.textInfo)
     perf.tock("text")
   of PrimitiveKind.Circle:
     perf.tick("circle")

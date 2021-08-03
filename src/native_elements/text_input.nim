@@ -3,6 +3,7 @@ import denim_ui
 import denim_ui/gui/primitives/defaults
 import denim_ui/gui/primitives/text
 import jsffi
+import math
 
 proc contains(self: dom.Element, elem: dom.Element): bool {.importjs: "#.contains(@)".}
 
@@ -21,22 +22,31 @@ type
 proc createHtmlTextInput(props: TextInputProps): dom.Element =
   if props.wordWrap:
     result = document.createElement("TEXTAREA")
+    result.style.setProperty("overflow", "hidden")
+    result.style.setProperty("resize", "none")
+    result.style.setProperty("line-height", "1.0")
+
+    result.style.setProperty("vertical-align", "top")
+
     result.addEventListener("keydown", proc(event: Event) =
       let ev = cast[KeyboardEvent](event)
       if $ev.key == "Enter" and props.preventNewLineOnEnter:
         event.preventDefault()
     )
-    #result.style.setProperty("word-wrap", "normal")
-    result.style.setProperty("word-break", "normal")
-    result.style.setProperty("wrap", "soft")
-    result.style.setProperty("overflow", "hidden")
-    result.style.setProperty("resize", "none")
-    result.style.setProperty("line-height", "1.0")
   else:
     result = document.createElement("INPUT")
-  result.style.position = "absolute"
+
+  result.style.position = "fixed"
+  result.style.background = "none"
+  result.style.outline = "none"
+  result.style.borderStyle = "none"
+
+  result.style.padding = "0px"
+  result.style.margin = "0px"
+
   if props.placeholder.isSome():
     result.setAttribute("placeholder", props.placeholder.get())
+
   result.value = props.text
 
 method measureOverride(self: HtmlTextInput, availableSize: Vec2[float]): Vec2[float] =
@@ -57,6 +67,15 @@ method measureOverride(self: HtmlTextInput, availableSize: Vec2[float]): Vec2[fl
   )
   totalSize
 
+template setIfChanged(prop: untyped, value: untyped): untyped =
+  let computedValue = value
+  if prop != computedValue:
+    # NOTE: Since the dom sometimes returns a different string value from the one we set it to
+    # this check is not reliable.
+    # In the future we might want to introduce a more granular change system, where we only get notified about
+    # which properties have changed, making this check implicit.
+    prop = computedValue
+
 method updateNativeElement(self: HtmlTextInput): void =
   let props = self.textInputProps
   let
@@ -66,27 +85,20 @@ method updateNativeElement(self: HtmlTextInput): void =
   let fontSize = props.fontSize.get(12.0) * max(scale.x, scale.y)
   let fontWeight = props.fontWeight.get(400)
   let fontStyle = props.fontStyle.get("normal")
-  let pos = bounds.pos
-  self.domElement.style.background = "none"
-  self.domElement.style.outline = "none"
-  self.domElement.style.borderStyle = "none"
-  if not self.textInputProps.wordWrap:
-    self.domElement.style.overflow = "visible"
-    self.domElement.style.lineHeight = "normal"
-  self.domElement.style.height = &"{bounds.height}px"
-  self.domElement.style.textOverflow = "visible"
-  self.domElement.style.width = &"{bounds.width}px"
-  self.domElement.style.transform = &"translate({pos.x}px,{pos.y}px)"
-  self.domElement.style.padding = &"0 0 0 0"
-  self.domElement.style.margin = &"0 0 0 0"
-  self.domElement.style.fontSize = &"{fontSize}px"
-  self.domElement.style.fontWeight = $fontWeight
-  self.domElement.style.fontStyle = &"{fontStyle}"
+
+  setIfChanged(self.domElement.value, props.text)
+
+  setIfChanged(self.domElement.style.fontSize, &"{fontSize}px")
+  setIfChanged(self.domElement.style.fontWeight, $fontWeight)
+  setIfChanged(self.domElement.style.fontStyle, &"{fontStyle}")
+  setIfChanged(self.domElement.style.width, &"{bounds.width}px")
+  setIfChanged(self.domElement.style.height, &"{bounds.height}px")
+  setIfChanged(self.domElement.style.left, &"{bounds.pos.x}px")
+  setIfChanged(self.domElement.style.top, &"{bounds.pos.y}px")
+  # setIfChanged(self.domElement.style.color, $self.textInputProps.color.get("#000000".parseColor()))
+
   if props.fontFamily.isSome:
     self.domElement.style.fontFamily = props.fontFamily.get
-  self.domElement.style.color = $self.textInputProps.color.get("#000000".parseColor())
-  if props.text != self.domElement.value:
-    self.domElement.value = props.text
 
 # TODO: Now we update all the native properties every frame while the native
 # element is rooted. This is fine for now since we mostly just have one or two active at the same time,
