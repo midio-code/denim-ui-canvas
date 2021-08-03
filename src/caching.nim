@@ -16,7 +16,7 @@ type
     cacheBounds*: JsMap[Hash, Bounds]
     cachedByZone*: JsMap[int, JsSet[Hash]]
 
-const cacheSize* = 2048.0
+const cacheSize* = 4096.0
 # We divide the cache into n * n zones, evicting one zone at the
 # time as we need more cache space after the cache is full
 const numZonesSqrt = 2
