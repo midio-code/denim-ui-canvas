@@ -23,6 +23,10 @@ const numZonesSqrt = 2
 const numZones = numZonesSqrt * numZonesSqrt
 const zoneSize = (cacheSize / numZonesSqrt.float).floor
 
+# The padding shouold be dynamically determined to account for elements drawing outside its bounds
+# but for now, we just hard code it to get something working for our use case.
+const padding = 16.0
+
 let zones = [
   zero(),
   vec2(zoneSize, 0.0),
@@ -38,7 +42,7 @@ proc newCache(): Cache =
     canvas: canvas,
     currentZone: 0,
     currentLineHeight: 0.0,
-    currentPosWithinZone: zero(),
+    currentPosWithinZone: vec2(padding),
     cacheBounds: newJsMap[Hash, Bounds](),
     cachedByZone: newJsMap[int, JsSet[Hash]]()
   )
@@ -49,7 +53,6 @@ proc context(cache: Cache): CanvasContext2d =
 # TODO: Rename this variable to just cache
 var caches* = newCache()
 
-const padding = 4.0
 
 proc evictCachedItemsForZone(cache: Cache, zone: int) =
   assert(zone in cache.cachedByZone)
@@ -69,10 +72,9 @@ proc clearZone(cache: Cache) =
 
 proc advanceToNextZone(cache: Cache) =
   cache.currentZone = (cache.currentZone + 1) mod numZones
-  cache.currentPosWithinZone = zero()
+  cache.currentPosWithinZone = vec2(padding)
   cache.evictCachedItemsForZone(cache.currentZone)
   cache.clearZone()
-  cache.currentPosWithinZone = zero()
 
 proc findNextAvailableCachePosition(cache: Cache, bounds: Bounds): Point =
   ## Finds a position in the cache that can accomodate `bounds`
@@ -81,18 +83,18 @@ proc findNextAvailableCachePosition(cache: Cache, bounds: Bounds): Point =
   cache.currentLineHeight = max(cache.currentLineHeight, bounds.size.y).ceil()
 
   let widthLeft = zoneSize - cache.currentPosWithinZone.x
-  if widthLeft < bounds.size.x + padding:
-    pos.x = 0.0
-    pos.y += cache.currentLineHeight + padding
+  if widthLeft < bounds.size.x + padding * 2.0:
+    pos.x = padding
+    pos.y += cache.currentLineHeight + padding * 2.0
     cache.currentLineHeight = bounds.size.y.ceil()
 
   let heightLeft = zoneSize - cache.currentPosWithinZone.y
-  if heightLeft < bounds.size.y + padding:
+  if heightLeft < bounds.size.y + padding * 2.0:
     # NOTE: We must evict something from the cache
     cache.advanceToNextZone()
-    pos = zero()
+    pos = vec2(padding)
 
-  cache.currentPosWithinZone = pos + vec2(bounds.size.x.ceil() + padding, 0.0)
+  cache.currentPosWithinZone = pos + vec2(bounds.size.x.ceil() + padding * 2.0, 0.0)
 
   vec2(pos.x.floor(), pos.y.floor()) + zones[cache.currentZone]
 
@@ -111,11 +113,11 @@ proc getCacheContextForPrimitive*(p: Primitive): CanvasContext2d =
   let ctx = cache.context
   ctx.setTransform(1.0, 0.0, 0.0, 1.0, pos.x, pos.y)
 
-  ctx.save()
-  ctx.strokeStyle = "#ff0000"
-  ctx.lineWidth = 2.0
-  ctx.strokeRect(0.0, 0.0, bounds.size.x, bounds.size.y)
-  ctx.restore()
+  # ctx.save()
+  # ctx.strokeStyle = "#ff0000"
+  # ctx.lineWidth = 2.0
+  # ctx.strokeRect(0.0, 0.0, bounds.size.x, bounds.size.y)
+  # ctx.restore()
 
   ctx
 
@@ -127,7 +129,7 @@ proc drawFromCache*(ctx: CanvasContext2d, p: Primitive): void =
   let cache = caches
   let bounds = cache.cacheBounds[p.id]
   let
-    pos = bounds.pos.copy()
-    size = bounds.size.copy()
+    pos = bounds.pos.copy() - vec2(padding)
+    size = bounds.size.copy() + vec2(padding * 2.0)
 
-  ctx.drawImage(cache.canvas, pos.x, pos.y, size.x, size.y, 0.0, 0.0, size.x, size.y)
+  ctx.drawImage(cache.canvas, pos.x, pos.y, size.x, size.y, -padding, -padding, size.x, size.y)
