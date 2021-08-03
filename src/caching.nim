@@ -24,10 +24,10 @@ const numZones = numZonesSqrt * numZonesSqrt
 const zoneSize = (cacheSize / numZonesSqrt.float).floor
 
 let zones = [
-  rect(zero(), vec2(zoneSize)),
-  rect(vec2(zoneSize, 0.0), vec2(zoneSize)),
-  rect(vec2(0.0, zoneSize), vec2(zoneSize)),
-  rect(vec2(zoneSize, zoneSize), vec2(zoneSize)),
+  zero(),
+  vec2(zoneSize, 0.0),
+  vec2(0.0, zoneSize),
+  vec2(zoneSize, zoneSize),
 ]
 
 proc newCache(): Cache =
@@ -61,11 +61,11 @@ proc evictCachedItemsForZone(cache: Cache, zone: int) =
 proc clearZone(cache: Cache) =
   let ctx = cache.context()
   let
-    currentZoneBounds = zones[cache.currentZone]
-    p = currentZoneBounds.pos
-    s = currentZoneBounds.size
+    currentZoneOffset = zones[cache.currentZone]
+    p = currentZoneOffset
+    s = zoneSize
   ctx.setTransform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
-  ctx.clearRect(p.x, p.y, s.x, s.y)
+  ctx.clearRect(p.x, p.y, s, s)
 
 proc advanceToNextZone(cache: Cache) =
   cache.currentZone = (cache.currentZone + 1) mod numZones
@@ -85,15 +85,16 @@ proc findNextAvailableCachePosition(cache: Cache, bounds: Bounds): Point =
     pos.x = 0.0
     pos.y += cache.currentLineHeight + padding
     cache.currentLineHeight = bounds.size.y.ceil()
-    cache.currentPosWithinZone = pos.copy()
-  else:
-    cache.currentPosWithinZone.x += bounds.size.x.ceil() + padding
 
   let heightLeft = zoneSize - cache.currentPosWithinZone.y
   if heightLeft < bounds.size.y + padding:
     # NOTE: We must evict something from the cache
     cache.advanceToNextZone()
-  vec2(pos.x.ceil(), pos.y.ceil()) + zones[cache.currentZone].pos
+    pos = zero()
+
+  cache.currentPosWithinZone = pos + vec2(bounds.size.x.ceil() + padding, 0.0)
+
+  vec2(pos.x.floor(), pos.y.floor()) + zones[cache.currentZone]
 
 proc getCacheContextForPrimitive*(p: Primitive): CanvasContext2d =
   let cache = caches
@@ -115,7 +116,6 @@ proc getCacheContextForPrimitive*(p: Primitive): CanvasContext2d =
   ctx.lineWidth = 2.0
   ctx.strokeRect(0.0, 0.0, bounds.size.x, bounds.size.y)
   ctx.restore()
-
 
   ctx
 
