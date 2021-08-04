@@ -24,9 +24,7 @@ proc createHtmlTextInput(props: TextInputProps): dom.Element =
     result = document.createElement("TEXTAREA")
     result.style.setProperty("overflow", "hidden")
     result.style.setProperty("resize", "none")
-    result.style.setProperty("line-height", "1.0")
-
-    result.style.setProperty("vertical-align", "top")
+    result.style.setProperty("line-height", $props.lineHeight.get(1.0))
 
     result.addEventListener("keydown", proc(event: Event) =
       let ev = cast[KeyboardEvent](event)
@@ -63,6 +61,7 @@ method measureOverride(self: HtmlTextInput, availableSize: Vec2[float]): Vec2[fl
     props.fontSize.get(defaults.fontSize),
     props.fontWeight.get(defaults.fontWeight),
     props.wordWrap,
+    props.lineHeight.get(1.0),
     availableSize
   )
   totalSize

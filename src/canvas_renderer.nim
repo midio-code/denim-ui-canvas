@@ -37,6 +37,9 @@ proc renderText(ctx: CanvasContext2d, bounds: Bounds, colorInfo: Option[ColorInf
   ctx.textBaseline = textInfo.textBaseline
   ctx.font = textInfo.fontWeight.toJs.toString().to(cstring) & space & textInfo.fontStyle & space & textInfo.fontSize.toJs.toString().to(cstring) & px & textInfo.fontFamily
 
+  # We want to render the text in the middle of the line, when line height != 1.0
+  let yRenderOffset = (bounds.size.y - textInfo.textSize.y) / 2.0
+
   when defined(draw_boxes_around_text):
     ctx.save()
     ctx.strokeStyle = "#ff0000"
@@ -44,7 +47,7 @@ proc renderText(ctx: CanvasContext2d, bounds: Bounds, colorInfo: Option[ColorInf
     ctx.strokeRect(0.0, 0.0, bounds.size.x, bounds.size.y)
     ctx.restore()
 
-  ctx.fillText(textInfo.text, 0.0, 0.0)
+  ctx.fillText(textInfo.text, 0.0, yRenderOffset)
 
 proc renderCircle(ctx: CanvasContext2d, radius: float): void =
   ctx.beginPath()
