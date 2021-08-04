@@ -20,11 +20,11 @@ type
     isFocusedSubscription: Subscription
 
 proc createHtmlTextInput(props: TextInputProps): dom.Element =
+  let fontSize = props.fontSize.get(defaults.fontSize)
   if props.wordWrap:
     result = document.createElement("TEXTAREA")
     result.style.setProperty("overflow", "hidden")
     result.style.setProperty("resize", "none")
-    result.style.setProperty("line-height", $props.lineHeight.get(1.0))
 
     result.addEventListener("keydown", proc(event: Event) =
       let ev = cast[KeyboardEvent](event)
@@ -38,6 +38,7 @@ proc createHtmlTextInput(props: TextInputProps): dom.Element =
   result.style.background = "none"
   result.style.outline = "none"
   result.style.borderStyle = "none"
+  result.style.setProperty("transform-origin", "top left")
 
   result.style.padding = "0px"
   result.style.margin = "0px"
@@ -55,13 +56,15 @@ method measureOverride(self: HtmlTextInput, availableSize: Vec2[float]): Vec2[fl
     else:
       props.text
 
+  let fontSize = props.fontSize.get(defaults.fontSize)
+
   let (lines, totalSize) = measureMultilineText(
     props.text,
     props.fontFamily.get(defaults.fontFamily),
-    props.fontSize.get(defaults.fontSize),
+    fontSize,
     props.fontWeight.get(defaults.fontWeight),
     props.wordWrap,
-    props.lineHeight.get(1.0),
+    props.lineHeight.get(fontSize),
     availableSize
   )
   totalSize
@@ -81,20 +84,32 @@ method updateNativeElement(self: HtmlTextInput): void =
     wbe = self.worldBoundsExpensive()
     bounds = wbe.bounds
     scale = wbe.scale
-  let fontSize = props.fontSize.get(12.0) * max(scale.x, scale.y)
+
+  let scaleFactor = max(scale.x, scale.y)
+  let fontSize = props.fontSize.get(12.0)
   let fontWeight = props.fontWeight.get(400)
   let fontStyle = props.fontStyle.get("normal")
+  let lineHeight = props.lineHeight.get(fontSize)
 
   setIfChanged(self.domElement.value, props.text)
 
+
+  self.domElement.style.setProperty("line-height", &"{lineHeight}px")
   setIfChanged(self.domElement.style.fontSize, &"{fontSize}px")
   setIfChanged(self.domElement.style.fontWeight, $fontWeight)
   setIfChanged(self.domElement.style.fontStyle, &"{fontStyle}")
-  setIfChanged(self.domElement.style.width, &"{bounds.width}px")
-  setIfChanged(self.domElement.style.height, &"{bounds.height}px")
-  setIfChanged(self.domElement.style.left, &"{bounds.pos.x}px")
-  setIfChanged(self.domElement.style.top, &"{bounds.pos.y}px")
-  # setIfChanged(self.domElement.style.color, $self.textInputProps.color.get("#000000".parseColor()))
+  setIfChanged(self.domElement.style.width, &"{self.bounds.get.width}px")
+  setIfChanged(self.domElement.style.height, &"{self.bounds.get.height}px")
+
+  # setIfChanged(self.domElement.style.left, &"{bounds.pos.x - 1.0}px")
+  # setIfChanged(self.domElement.style.top, &"{bounds.pos.y - 1.5}px")
+
+  let x = (bounds.pos.x - 1.0) / scaleFactor
+  let y = (bounds.pos.y - 1.5) / scaleFactor
+
+  self.domElement.style.transform = &"scale({scaleFactor}, {scaleFactor}) translate({x}px, {y}px)"
+
+  setIfChanged(self.domElement.style.color, $self.textInputProps.color.get("#000000".parseColor()))
 
   if props.fontFamily.isSome:
     self.domElement.style.fontFamily = props.fontFamily.get
