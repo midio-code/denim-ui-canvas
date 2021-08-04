@@ -101,11 +101,8 @@ method updateNativeElement(self: HtmlTextInput): void =
   setIfChanged(self.domElement.style.width, &"{self.bounds.get.width}px")
   setIfChanged(self.domElement.style.height, &"{self.bounds.get.height}px")
 
-  # setIfChanged(self.domElement.style.left, &"{bounds.pos.x - 1.0}px")
-  # setIfChanged(self.domElement.style.top, &"{bounds.pos.y - 1.5}px")
-
-  let x = (bounds.pos.x - 1.0) / scaleFactor
-  let y = (bounds.pos.y - 1.5) / scaleFactor
+  let x = bounds.pos.x / scaleFactor
+  let y = bounds.pos.y / scaleFactor
 
   self.domElement.style.transform = &"scale({scaleFactor}, {scaleFactor}) translate({x}px, {y}px)"
 
