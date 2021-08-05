@@ -1,19 +1,21 @@
 import math
 import sugar
+import jsffi
 import strformat
 import options
 import canvas
 import denim_ui
 import strutils
-import jsffi
 import tables
+import sets
 import dom
+import hashes
+import jsSet
+import jsMap
 import performance
+import caching
 
-var document {.importc, nodecl.}: JsObject
-var console {.importc, nodecl.}: JsObject
-
-proc renderSegment(ctx: CanvasContext2d, segment: PathSegment): void =
+proc renderSegment*(ctx: CanvasContext2d, segment: PathSegment): void =
   case segment.kind
   of MoveTo:
     ctx.moveTo(segment.to.x, segment.to.y)
@@ -49,17 +51,17 @@ proc renderText(ctx: CanvasContext2d, bounds: Bounds, colorInfo: Option[ColorInf
 
   ctx.fillText(textInfo.text, 0.0, yRenderOffset)
 
-proc renderCircle(ctx: CanvasContext2d, radius: float): void =
+proc renderCircle*(ctx: CanvasContext2d, radius: float): void =
   ctx.beginPath()
   ctx.arc(radius, radius, radius, 0, 2 * PI)
 
-proc renderEllipse(ctx: CanvasContext2d, info: EllipseInfo): void =
+proc renderEllipse*(ctx: CanvasContext2d, info: EllipseInfo): void =
   ctx.beginPath()
   let
     r = info.radius
   ctx.ellipse(0.0, 0.0, r.x, r.y, info.rotation, info.startAngle, info.endAngle)
 
-proc renderImage(ctx: CanvasContext2d, bounds: Bounds, info: ImageInfo): void =
+proc renderImage*(ctx: CanvasContext2d, bounds: Bounds, info: ImageInfo): void =
   let image = newImage()
   image.src = info.uri
   ctx.drawImage(image, bounds.pos.x, bounds.pos.y, bounds.size.x, bounds.size.y)
@@ -191,7 +193,7 @@ proc renderRectWithRadius*(ctx: CanvasContext2d, bounds: Bounds, radius: CornerR
 
   ctx.closePath()
 
-proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
+proc renderPrimitive*(ctx: CanvasContext2d, p: Primitive): void =
   case p.kind
   of PrimitiveKind.Container:
     discard
@@ -237,34 +239,87 @@ proc renderPrimitive(ctx: CanvasContext2d, p: Primitive): void =
     fillAndStroke(ctx, p.colorInfo, p.strokeInfo, p.shadow)
     perf.tock("rectangle")
 
-proc render*(ctx: CanvasContext2d, primitive: Primitive, performance: performance.Performance): void =
+
+
+var primitivesSeenThisFrame = newJsSet[Hash]()
+var counters = newJsMap[Hash, int]()
+
+
+proc registerPrimitiveCurrentFrame(p: Primitive) =
+  primitivesSeenThisFrame.incl(p.id)
+
+proc seenPastNumberOfFrames(p: Primitive): int =
+  ## Returns how many of the past frames this primitive has been seen
+  counters[p.id]
+
+proc endFrame(): void =
+  for hash in primitivesSeenThisFrame:
+    if hash notin counters:
+      counters[hash] = 0
+    counters[hash] = counters[hash] + 1
+
+  var toRemove: seq[Hash] = @[]
+  for k,v in counters:
+    if k notin primitivesSeenThisFrame:
+      toRemove.add(k)
+  primitivesSeenThisFrame.clear()
+  for remove in toRemove:
+    counters.delete(remove)
+
+const cacheWhenPrimitiveHasExistedForNFrames = 4
+
+proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bool = false): void =
+
   ctx.save()
-  if primitive.opacity.isSome:
-    ctx.globalAlpha = primitive.opacity.get
 
-  perf.tick("translate")
-  ctx.translate(primitive.bounds.x, primitive.bounds.y)
-  perf.tock("translate")
+  if not isCaching and primitive.isCached:
+    ctx.translate(primitive.bounds.x, primitive.bounds.y)
+    perf.count("Draw from cache")
+    ctx.drawFromCache(primitive)
+  else:
+    for transform in  primitive.transform:
+      case transform.kind:
+        of Scaling:
+          ctx.scale(
+            transform.scale.x,
+            transform.scale.y
+          )
+        of Translation:
+          ctx.translate(transform.translation.x.floor(), transform.translation.y.floor())
+        of Rotation:
+          ctx.rotate(transform.rotation)
 
-  perf.tick("transform")
-  for transform in  primitive.transform:
-    case transform.kind:
-      of Scaling:
-        ctx.scale(
-          transform.scale.x,
-          transform.scale.y
-        )
-      of Translation:
-        ctx.translate(transform.translation.x, transform.translation.y)
-      of Rotation:
-        ctx.rotate(transform.rotation)
-  perf.tock("transform")
-  if primitive.clipToBounds:
-    ctx.beginPath()
-    let cb = primitive.bounds
-    ctx.rect(0.0, 0.0, cb.size.x, cb.size.y)
-    ctx.clip()
-  ctx.renderPrimitive(primitive)
-  for p in primitive.children:
-    ctx.render(p, performance)
+    ctx.translate(primitive.bounds.x, primitive.bounds.y)
+
+    if primitive.opacity.isSome:
+      ctx.globalAlpha = primitive.opacity.get
+
+    if primitive.clipToBounds:
+      ctx.beginPath()
+      let cb = primitive.bounds
+      ctx.rect(0.0, 0.0, cb.size.x, cb.size.y)
+      ctx.clip()
+
+    if isCaching:
+      perf.count("Caching")
+    else:
+      perf.count("Uncached")
+
+    let seenEnoughTimesToCache = seenPastNumberOfFrames(primitive) >= cacheWhenPrimitiveHasExistedForNFrames
+    if not isCaching and primitive.cache and seenEnoughTimesToCache:
+      let cacheCtx = getCacheContextForPrimitive(primitive)
+      perf.count("Caching")
+      cacheCtx.renderPrimitive(primitive)
+      for p in primitive.children:
+        cacheCtx.renderPrimitives(p, true)
+      ctx.drawFromCache(primitive)
+    else:
+      ctx.renderPrimitive(primitive)
+      for p in primitive.children:
+        ctx.renderPrimitives(p, isCaching)
   ctx.restore()
+  registerPrimitiveCurrentFrame(primitive)
+
+proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
+  ctx.renderPrimitives(primitive)
+  endFrame()

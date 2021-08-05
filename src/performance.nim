@@ -7,13 +7,15 @@ import math
 import colors
 import denim_ui
 import jsMap
+import caching
 
 var console {.importc, nodecl.}: JsObject
 
 const width = 600.0
 const height = 130.0
 const textPanelWidth = 250.0
-const textPanelHeight = height * 2.0
+const textPanelHeight = height * 3.0
+const cacheTextureSize = 400.0
 const numFramesToDisplay = 120
 
 proc lerp(t, a, b: float): float =
@@ -32,6 +34,7 @@ type
     startTime: float
     endTime: float
     events: seq[tuple[label: cstring, event: Event]]
+    counters: JsMap[cstring, int]
 
   Performance* = ref object
     stopped: bool
@@ -62,7 +65,7 @@ proc summarizeFrame(frame: Frame): JsMap[cstring, float] =
       summarizedEvents.set(label, summarizedEvents.get(label) + ev.time)
   summarizedEvents
 
-proc tick*(self: Performance, label: cstring): void =
+proc tickImpl(self: Performance, label: cstring): void =
   if self.stopped:
     return
 
@@ -71,7 +74,11 @@ proc tick*(self: Performance, label: cstring): void =
     (label, Event(kind: EventKind.Tick, time: time))
   )
 
-proc tock*(self: Performance, label: cstring): void =
+template tick*(self: Performance, label: cstring): void =
+  when defined(visualize_performance):
+    tickImpl(self, label)
+
+proc tockImpl(self: Performance, label: cstring): void =
   if self.stopped:
     return
 
@@ -79,8 +86,24 @@ proc tock*(self: Performance, label: cstring): void =
     (label, Event(kind: EventKind.Tock, time: performance.now()))
   )
 
+template tock*(self: Performance, label: cstring): void =
+  when defined(visualize_performance):
+    tockImpl(self, label)
+
+proc countImpl(self: Performance, label: cstring): void =
+  if isNil(self.frames[self.currentFrame]):
+    return
+  let cf = self.frames[self.currentFrame]
+  if label notin cf.counters:
+    cf.counters[label] = 0
+  cf.counters[label] = cf.counters[label] + 1
+
+template count*(self: Performance, label: cstring): void =
+  when defined(visualize_performance):
+    countImpl(self, label)
+
 var performanceCanvas = createCanvas()
-performanceCanvas.width = width + textPanelWidth
+performanceCanvas.width = width + textPanelWidth  + cacheTextureSize
 performanceCanvas.height = height + 500.0
 
 let performanceCanvasContext = performanceCanvas.getContext2d()
@@ -92,7 +115,8 @@ proc beginFrame*(self: Performance): void =
   console.timeStamp("Frame " & $self.currentFrame)
   self.frames[self.currentFrame] = Frame(
     startTime: performance.now(),
-    events: newSeqOfCap[(cstring, Event)](100)
+    events: newSeqOfCap[(cstring, Event)](100),
+    counters: newJsMap[cstring, int]()
   )
 
 proc endFrame*(self: Performance): void =
@@ -144,16 +168,17 @@ proc drawLastFrame(self: Performance): void =
 
   var summarizedEvents = summarizeFrame(lastFrame)
 
-  for label, timeSpent in summarizedEvents:
-    let barHeight = (timeSpent / (16.0 * 2.0)) * height
-    performanceCanvasContext.fillStyle = $color
-    performanceCanvasContext.strokeStyle = cstring("#555555")
-    performanceCanvasContext.lineWidth = 1.0
-    let x = barWidth * lastFrameIndex.float
-    let y = height - barHeight - yPos
-    performanceCanvasContext.fillRect(x, y, barWidth, barHeight)
-    performanceCanvasContext.strokeRect(x, y, barWidth, barHeight)
-    yPos += barHeight
+  let timeSpent = lastFrame.endTime - lastFrame.startTime
+  let barHeight = (timeSpent / (16.0 * 2.0)) * height
+
+  performanceCanvasContext.fillStyle = $color
+  performanceCanvasContext.strokeStyle = cstring("#555555")
+  performanceCanvasContext.lineWidth = 1.0
+  let x = barWidth * lastFrameIndex.float
+  let y = height - barHeight - yPos
+  performanceCanvasContext.fillRect(x, y, barWidth, barHeight)
+  performanceCanvasContext.strokeRect(x, y, barWidth, barHeight)
+
   # Render 60fps line
   performanceCanvasContext.fillStyle = cstring("#004400")
   performanceCanvasContext.fillRect(0.0, height / 2.0, width, 1.0)
@@ -177,12 +202,18 @@ proc drawLastFrame(self: Performance): void =
       performanceCanvasContext.fillText(&"Frame: {self.hoveredFrame}", width + 5.0, yPos)
       yPos += lineHeight
       for label, timeSpent in summarizedEvents:
-        performanceCanvasContext.fillText(&"{label}: {$timeSpent:3.3}", width + 5.0, yPos)
+        performanceCanvasContext.fillText(&"{label}: {$timeSpent:3.3}ms", width + 5.0, yPos)
+        yPos += lineHeight
+      for label, count in hoveredFrame.counters:
+        performanceCanvasContext.fillText(&"{label}: {$count}", width + 5.0, yPos)
         yPos += lineHeight
 
       let hoveredFrameTime = hoveredFrame.endTime - hoveredFrame.startTime
       performanceCanvasContext.fillText(&"Total: {hoveredFrameTime:3.3}", width + 5.0, yPos)
 
+  performanceCanvasContext.fillStyle = "#220000"
+  performanceCanvasContext.fillRect(width + textPanelWidth, 0.0, cacheTextureSize, cacheTextureSize)
+  performanceCanvasContext.drawImage(caches.canvas, 0.0, 0.0, cacheSize, cacheSize, width + textPanelWidth, 0.0, cacheTextureSize, cacheTextureSize)
 
 proc drawPerformance*(self: Performance, ctx: CanvasContext2d): void =
   self.drawLastFrame()

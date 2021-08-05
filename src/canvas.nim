@@ -3,7 +3,6 @@ import denim_ui
 import dom
 
 type
-
   Canvas* = ref CanvasObj
   CanvasObj {.importc.} = object of dom.Element
     width*: float
@@ -30,9 +29,9 @@ type
 
   Path2D* {.importjs.} = ref object
 
-proc getContext2d*(c: Canvas, alpha: bool = false): CanvasContext2d {.importjs: "#.getContext('2d', @)"}
-
 proc createCanvas*(): Canvas {.importjs: "document.createElement('canvas')".}
+
+proc getContext2d*(c: Canvas, alpha: bool = false): CanvasContext2d {.importjs: "#.getContext('2d', @)"}
 
 proc beginPath*(c: CanvasContext2d) {.importjs: "#.beginPath()".}
 proc strokeText*(c: CanvasContext2d, txt: cstring, x, y: float) {.importjs: "#.strokeText(@)".}
@@ -66,15 +65,24 @@ proc restore*(c: CanvasContext2d) {.importjs: "#.restore()".}
 
 proc setLineDash*(c: CanvasContext2d, pattern: seq[int]) {.importjs: "#.setLineDash(@)".}
 
-type Image* {.importc.} = ref object
-  src*: cstring
+type
+  Image* {.importc.} = ref object
+    src*: cstring
 
+proc setSourceToBlob*(self: Image, blob: Blob): void {.importjs: "#.src = URL.createObjectURL(@)".}
 proc newImage*(): Image {.importjs: "new Image()".}
-proc drawImage*(ctx: CanvasContext2d, img: Image, x, y, w, h: float): void {.importjs: "#.drawImage(@)".}
+proc newImage*(blob: Blob): Image =
+  result = newImage()
+  result.setSourceToBlob(blob)
 
-proc drawImage*(ctx: CanvasContext2d, img: Canvas, dx, dy: float): void {.importjs: "#.drawImage(@)".}
-proc drawImage*(ctx: CanvasContext2d, img: Canvas, dx, dy, dw, dh: float): void {.importjs: "#.drawImage(@)".}
+proc drawImage*(ctx: CanvasContext2d, img: Image, sx, sy, sw, sh, dx, dy, dw, dh: float): void {.importjs: "#.drawImage(@)".}
+proc drawImage*(ctx: CanvasContext2d, img: Image, sx, sy, sw, sh: float): void {.importjs: "#.drawImage(@)".}
+proc drawImage*(ctx: CanvasContext2d, img: Image, dx, dy: float): void {.importjs: "#.drawImage(@)".}
+
 proc drawImage*(ctx: CanvasContext2d, img: Canvas, sx, sy, sw, sh, dx, dy, dw, dh: float): void {.importjs: "#.drawImage(@)".}
+proc drawImage*(ctx: CanvasContext2d, img: Canvas, dx, dy, dw, dh: float): void {.importjs: "#.drawImage(@)".}
+proc drawImage*(ctx: CanvasContext2d, img: Canvas, dx, dy: float): void {.importjs: "#.drawImage(@)".}
+
 
 proc transform*(
   c: CanvasContext2d,
@@ -89,6 +97,21 @@ proc transform*(
 proc rotate*(c: CanvasContext2d, angle: float) {.importjs: "#.rotate(@)".}
 proc scale*(c: CanvasContext2d, x: float, y: float) {.importjs: "#.scale(@)".}
 proc translate*(c: CanvasContext2d, x: float, y: float) {.importjs: "#.translate(@)".}
+
+
+type
+  DOMMatrix {.nodecl, importc.} = ref object
+    a,b,c,d,e,f: float
+
+proc scale*(self: DOMMatrix): Vec2[float] =
+  vec2(self.a, self.d)
+
+proc position*(self: DOMMatrix): Vec2[float] =
+  vec2(self.e, self.f)
+
+proc getTransform*(ctx: CanvasContext2d): DOMMatrix {.importjs: "#.getTransform()".}
+
+proc setTransform*(ctx: CanvasContext2d, a,b,c,d,e,f: float) {.importjs: "#.setTransform(@)".}
 proc resetTransform*(c: CanvasContext2d) {.importjs: "#.resetTransform()".}
 
 
@@ -120,3 +143,6 @@ proc createRadialGradient*(c: CanvasContext2d, x0, y0, r0, x1, y1, r1: float): G
 proc addColorStop*(self: Gradient, pos: float, color: cstring): void {.importjs: "#.addColorStop(@)"}
 
 proc setFillStyle*(self: CanvasContext2d, grad: Gradient): void {.importjs: "#.fillStyle = #".}
+
+
+proc toBlob*(self: Canvas, callback: Blob -> void): void {.importjs: "#.toBlob(@)".}
