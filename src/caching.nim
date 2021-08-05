@@ -25,6 +25,7 @@ const zoneSize = (cacheSize / numZonesSqrt.float).floor
 
 # The padding shouold be dynamically determined to account for elements drawing outside its bounds
 # but for now, we just hard code it to get something working for our use case.
+# NOTE: The 0.5 makes sure we don't get a blurry result
 const padding = 16.0
 
 let zones = [

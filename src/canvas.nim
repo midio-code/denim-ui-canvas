@@ -97,6 +97,20 @@ proc transform*(
 proc rotate*(c: CanvasContext2d, angle: float) {.importjs: "#.rotate(@)".}
 proc scale*(c: CanvasContext2d, x: float, y: float) {.importjs: "#.scale(@)".}
 proc translate*(c: CanvasContext2d, x: float, y: float) {.importjs: "#.translate(@)".}
+
+
+type
+  DOMMatrix {.nodecl, importc.} = ref object
+    a,b,c,d,e,f: float
+
+proc scale*(self: DOMMatrix): Vec2[float] =
+  vec2(self.a, self.d)
+
+proc position*(self: DOMMatrix): Vec2[float] =
+  vec2(self.e, self.f)
+
+proc getTransform*(ctx: CanvasContext2d): DOMMatrix {.importjs: "#.getTransform()".}
+
 proc setTransform*(ctx: CanvasContext2d, a,b,c,d,e,f: float) {.importjs: "#.setTransform(@)".}
 proc resetTransform*(c: CanvasContext2d) {.importjs: "#.resetTransform()".}
 

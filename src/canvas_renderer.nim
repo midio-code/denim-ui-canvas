@@ -285,7 +285,7 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bo
             transform.scale.y
           )
         of Translation:
-          ctx.translate(transform.translation.x, transform.translation.y)
+          ctx.translate(transform.translation.x.floor(), transform.translation.y.floor())
         of Rotation:
           ctx.rotate(transform.rotation)
 
