@@ -82,6 +82,9 @@ template setIfChanged(prop: untyped, value: untyped): untyped =
     prop = computedValue
 
 method updateNativeElement(self: HtmlTextInput): void =
+  if self.bounds.isNone:
+    return
+
   let props = self.textInputProps
   let
     wbe = self.worldBoundsExpensive()
