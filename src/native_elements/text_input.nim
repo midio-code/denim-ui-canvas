@@ -26,13 +26,16 @@ proc createHtmlTextInput(props: TextInputProps): dom.Element =
     result.style.setProperty("overflow", "hidden")
     result.style.setProperty("resize", "none")
 
-    result.addEventListener("keydown", proc(event: Event) =
-      let ev = cast[KeyboardEvent](event)
-      if $ev.key == "Enter" and props.preventNewLineOnEnter:
-        event.preventDefault()
-    )
   else:
     result = document.createElement("INPUT")
+
+  result.addEventListener("keydown", proc(event: Event) =
+    let ev = cast[KeyboardEvent](event)
+    if $ev.key == "Enter" and props.wordWrap and props.preventNewLineOnEnter:
+      event.preventDefault()
+    elif $ev.key == "Tab":
+      event.preventDefault()
+  )
 
   result.style.position = "fixed"
   result.style.background = "none"
