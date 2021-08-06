@@ -268,8 +268,7 @@ proc endFrame(): void =
 
 const cacheWhenPrimitiveHasExistedForNFrames = 4
 
-proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bool = false): void =
-
+proc renderPrimitivesCached*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bool = false): void =
   ctx.save()
 
   if not isCaching and primitive.isCached:
@@ -314,17 +313,53 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bo
         let cacheCtx = maybeCacheCtx.get()
         cacheCtx.renderPrimitive(primitive)
         for p in primitive.children:
-          cacheCtx.renderPrimitives(p, true)
+          cacheCtx.renderPrimitivesCached(p, true)
         ctx.drawFromCache(primitive)
         didRender = true
     if not didRender:
       ctx.renderPrimitive(primitive)
       for p in primitive.children:
-        ctx.renderPrimitives(p, isCaching)
+        ctx.renderPrimitivesCached(p, isCaching)
   ctx.restore()
   registerPrimitiveCurrentFrame(primitive)
 
+proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive): void =
+  ctx.save()
+  if primitive.opacity.isSome:
+    ctx.globalAlpha = primitive.opacity.get
+
+  perf.tick("translate")
+  ctx.translate(primitive.bounds.x, primitive.bounds.y)
+  perf.tock("translate")
+
+  perf.tick("transform")
+  for transform in  primitive.transform:
+    case transform.kind:
+      of Scaling:
+        ctx.scale(
+          transform.scale.x,
+          transform.scale.y
+        )
+      of Translation:
+        ctx.translate(transform.translation.x.floor(), transform.translation.y.floor())
+      of Rotation:
+        ctx.rotate(transform.rotation)
+  perf.tock("transform")
+  if primitive.clipToBounds:
+    ctx.beginPath()
+    let cb = primitive.bounds
+    ctx.rect(0.0, 0.0, cb.size.x, cb.size.y)
+    ctx.clip()
+  ctx.renderPrimitive(primitive)
+  for p in primitive.children:
+    ctx.renderPrimitives(p)
+  ctx.restore()
+
 proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
-  beginCacheFrame()
-  ctx.renderPrimitives(primitive)
+  when defined(cached_rendering):
+    beginCacheFrame()
+    ctx.renderPrimitivesCached(primitive)
+  else:
+    ctx.renderPrimitives(primitive)
+
   endFrame()
