@@ -306,14 +306,18 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bo
       perf.count("Uncached")
 
     let seenEnoughTimesToCache = seenPastNumberOfFrames(primitive) >= cacheWhenPrimitiveHasExistedForNFrames
+    var didRender = false
     if not isCaching and primitive.cache and seenEnoughTimesToCache:
-      let cacheCtx = getCacheContextForPrimitive(primitive)
-      perf.count("Caching")
-      cacheCtx.renderPrimitive(primitive)
-      for p in primitive.children:
-        cacheCtx.renderPrimitives(p, true)
-      ctx.drawFromCache(primitive)
-    else:
+      let maybeCacheCtx = tryGetCacheContextForPrimitive(primitive)
+      if maybeCacheCtx.isSome:
+        perf.count("Caching")
+        let cacheCtx = maybeCacheCtx.get()
+        cacheCtx.renderPrimitive(primitive)
+        for p in primitive.children:
+          cacheCtx.renderPrimitives(p, true)
+        ctx.drawFromCache(primitive)
+        didRender = true
+    if not didRender:
       ctx.renderPrimitive(primitive)
       for p in primitive.children:
         ctx.renderPrimitives(p, isCaching)
@@ -321,5 +325,6 @@ proc renderPrimitives*(ctx: CanvasContext2d, primitive: Primitive, isCaching: bo
   registerPrimitiveCurrentFrame(primitive)
 
 proc render*(ctx: CanvasContext2d, primitive: Primitive): void =
+  beginCacheFrame()
   ctx.renderPrimitives(primitive)
   endFrame()

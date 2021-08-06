@@ -10,29 +10,30 @@ import math
 type
   Cache = ref object
     canvas*: Canvas
-    currentZone*: int
-    currentPosWithinZone*: Point
+    currentTile*: int
+    currentPosWithinTile*: Point
     currentLineHeight*: float
     cacheBounds*: JsMap[Hash, Bounds]
-    cachedByZone*: JsMap[int, JsSet[Hash]]
+    cachedByTile*: JsMap[int, JsSet[Hash]]
 
 const cacheSize* = 4096.0
-# We divide the cache into n * n zones, evicting one zone at the
+
+# We divide the cache into n * n tiles, evicting one tile at the
 # time as we need more cache space after the cache is full
-const numZonesSqrt = 2
-const numZones = numZonesSqrt * numZonesSqrt
-const zoneSize = (cacheSize / numZonesSqrt.float).floor
+const numTilesSqrt = 2
+const numTiles = numTilesSqrt * numTilesSqrt
+const tileSize = (cacheSize / numTilesSqrt.float).floor
 
 # The padding shouold be dynamically determined to account for elements drawing outside its bounds
 # but for now, we just hard code it to get something working for our use case.
 # NOTE: The 0.5 makes sure we don't get a blurry result
 const padding = 16.0
 
-let zones = [
+let tiles = [
   zero(),
-  vec2(zoneSize, 0.0),
-  vec2(0.0, zoneSize),
-  vec2(zoneSize, zoneSize),
+  vec2(tileSize, 0.0),
+  vec2(0.0, tileSize),
+  vec2(tileSize, tileSize),
 ]
 
 proc newCache(): Cache =
@@ -41,11 +42,11 @@ proc newCache(): Cache =
   canvas.height = cacheSize
   Cache(
     canvas: canvas,
-    currentZone: 0,
+    currentTile: 0,
     currentLineHeight: 0.0,
-    currentPosWithinZone: vec2(padding),
+    currentPosWithinTile: vec2(padding),
     cacheBounds: newJsMap[Hash, Bounds](),
-    cachedByZone: newJsMap[int, JsSet[Hash]]()
+    cachedByTile: newJsMap[int, JsSet[Hash]]()
   )
 
 proc context(cache: Cache): CanvasContext2d =
@@ -53,74 +54,80 @@ proc context(cache: Cache): CanvasContext2d =
 
 # TODO: Rename this variable to just cache
 var caches* = newCache()
+var cacheTilesSpentThisFrame = 0
 
-
-proc evictCachedItemsForZone(cache: Cache, zone: int) =
-  assert(zone in cache.cachedByZone)
-  let cachedByZone = cache.cachedByZone.mgetorput(zone, newJsSet[Hash]())
-  for item in cachedByZone:
+proc evictCachedItemsForTile(cache: Cache, tile: int) =
+  assert(tile in cache.cachedByTile)
+  let cachedByTile = cache.cachedByTile.mgetorput(tile, newJsSet[Hash]())
+  for item in cachedByTile:
     cache.cacheBounds.delete(item)
-  cache.cachedByZone[zone] = newJsSet[Hash]()
+  cache.cachedByTile[tile] = newJsSet[Hash]()
 
-proc clearZone(cache: Cache) =
+proc clearTile(cache: Cache) =
   let ctx = cache.context()
   let
-    currentZoneOffset = zones[cache.currentZone]
-    p = currentZoneOffset
-    s = zoneSize
+    currentTileOffset = tiles[cache.currentTile]
+    p = currentTileOffset
+    s = tileSize
   ctx.setTransform(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
   ctx.clearRect(p.x, p.y, s, s)
 
-proc advanceToNextZone(cache: Cache) =
-  cache.currentZone = (cache.currentZone + 1) mod numZones
-  cache.currentPosWithinZone = vec2(padding)
-  cache.evictCachedItemsForZone(cache.currentZone)
-  cache.clearZone()
+proc advanceToNextTile(cache: Cache) =
+  cache.currentTile = (cache.currentTile + 1) mod numTiles
+  cache.currentPosWithinTile = vec2(padding)
+  cache.evictCachedItemsForTile(cache.currentTile)
+  cache.clearTile()
+  cacheTilesSpentThisFrame += 1
 
-proc findNextAvailableCachePosition(cache: Cache, bounds: Bounds): Point =
-  ## Finds a position in the cache that can accomodate `bounds`
-  var pos = cache.currentPosWithinZone.copy()
+proc claimCacheSpaceForBounds(cache: Cache, bounds: Bounds): Point =
+  ## Finds a position in the cache that can accomodate `bounds` and claims it,
+  ## potentially evicting the whole tile it is in.
+  var pos = cache.currentPosWithinTile.copy()
+  let paddedSize = bounds.size + vec2(padding * 2.0)
 
-  cache.currentLineHeight = max(cache.currentLineHeight, bounds.size.y).ceil()
-
-  let widthLeft = zoneSize - cache.currentPosWithinZone.x
-  if widthLeft < bounds.size.x + padding * 2.0:
+  let widthLeft = tileSize - cache.currentPosWithinTile.x
+  if widthLeft < paddedSize.x.ceil():
     pos.x = padding
-    pos.y += cache.currentLineHeight + padding * 2.0
+    pos.y += cache.currentLineHeight
     cache.currentLineHeight = bounds.size.y.ceil()
+  else:
+    cache.currentLineHeight = max(cache.currentLineHeight, paddedSize.y).ceil()
 
-  let heightLeft = zoneSize - cache.currentPosWithinZone.y
-  if heightLeft < bounds.size.y + padding * 2.0:
+  let heightLeft = tileSize - pos.y
+  if heightLeft < paddedSize.y.ceil():
     # NOTE: We must evict something from the cache
-    cache.advanceToNextZone()
+    cache.advanceToNextTile()
     pos = vec2(padding)
+    cache.currentLineHeight = paddedSize.y
 
-  cache.currentPosWithinZone = pos + vec2(bounds.size.x.ceil() + padding * 2.0, 0.0)
+  cache.currentPosWithinTile = pos + vec2(paddedSize.x.ceil(), 0.0)
+  result = vec2(pos.x.floor(), pos.y.floor()) + tiles[cache.currentTile]
 
-  vec2(pos.x.floor(), pos.y.floor()) + zones[cache.currentZone]
+proc isTooBigForCache(p: Primitive): bool =
+  let paddedSize = p.bounds.size + vec2(padding * 2.0)
+  paddedSize.x >= tileSize or paddedSize.y >= tileSize
 
-proc getCacheContextForPrimitive*(p: Primitive): CanvasContext2d =
+proc tryGetCacheContextForPrimitive*(p: Primitive): Option[CanvasContext2d] =
+  if cacheTilesSpentThisFrame >= numTiles or p.isTooBigForCache:
+    # NOTE: If we've filled the entire cache this frame, we at least won't try to cache
+    # any more this frame.
+    return none[CanvasContext2d]()
+
   let cache = caches
   let bounds = rect(zero(), p.bounds.size)
-  let pos = cache.findNextAvailableCachePosition(bounds)
+  let pos = cache.claimCacheSpaceForBounds(bounds)
 
   cache.cacheBounds[p.id] = rect(pos.copy(), bounds.size)
 
-  # NOTE: Caching an index for each zone so that we know which cache bounds to evict
-  # when recycling a zone
-  let cachedByZone = cache.cachedByZone.mgetorput(cache.currentZone, newJsSet[Hash]())
-  cachedByZone.incl(p.id)
+  # NOTE: Caching an index for each tile so that we know which cache bounds to evict
+  # when recycling a tile
+  let cachedByTile = cache.cachedByTile.mgetorput(cache.currentTile, newJsSet[Hash]())
+  cachedByTile.incl(p.id)
 
   let ctx = cache.context
   ctx.setTransform(1.0, 0.0, 0.0, 1.0, pos.x, pos.y)
 
-  # ctx.save()
-  # ctx.strokeStyle = "#ff0000"
-  # ctx.lineWidth = 2.0
-  # ctx.strokeRect(0.0, 0.0, bounds.size.x, bounds.size.y)
-  # ctx.restore()
-
-  ctx
+  some(ctx)
 
 proc isCached*(p: Primitive): bool =
   p.id in caches.cacheBounds
@@ -134,3 +141,6 @@ proc drawFromCache*(ctx: CanvasContext2d, p: Primitive): void =
     size = bounds.size.copy() + vec2(padding * 2.0)
 
   ctx.drawImage(cache.canvas, pos.x, pos.y, size.x, size.y, -padding, -padding, size.x, size.y)
+
+proc beginCacheFrame*() =
+  cacheTilesSpentThisFrame = 0
